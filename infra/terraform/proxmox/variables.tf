@@ -1,16 +1,4 @@
 # variables for Terraform HTTP backend
-variable "http_username" {
-  description = "Username for HTTP backend"
-  type        = string
-  sensitive   = true
-}
-
-variable "http_password" {
-  description = "Password for HTTP backend"
-  type        = string
-  sensitive   = true
-}
-
 variable "http_address" {
   description = "HTTP backend address"
   type        = string
@@ -18,11 +6,6 @@ variable "http_address" {
 
 variable "http_lock_address" {
   description = "HTTP backend lock address"
-  type        = string
-}
-
-variable "http_unlock_address" {
-  description = "HTTP backend unlock address"
   type        = string
 }
 

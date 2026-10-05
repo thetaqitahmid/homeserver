@@ -931,14 +931,14 @@ Finally, deploy the Immich helm chart with the following values:
 ```bash
 source .env
 helm upgrade --install \
-    --namespace immich immich immich/immich-helm-chart \
+    --namespace immich immich oci://ghcr.io/immich-app/immich-charts/immich\
     -f immich/immich-helm-chart/values.yaml \
-    --set env.DB_USERNAME=$IMMICH_DB_USER \
-    --set env.DB_PASSWORD=$IMMICH_DB_PASSWORD \
-    --set env.DB_DATABASE_NAME=$IMMICH_DB_NAME \
+    --set controllers.main.containers.main.env.DB_USERNAME=$IMMICH_DB_USER \
+    --set controllers.main.containers.main.env.DB_PASSWORD=$IMMICH_DB_PASSWORD \
+    --set controllers.main.containers.main.env.DB_DATABASE_NAME=$IMMICH_DB_NAME \
     --set server.ingress.main.hosts[0].host=$IMMICH_HOST \
     --set server.ingress.main.tls[0].hosts[0]=$IMMICH_HOST \
-    --atomic
+    --rollback-on-failure
 ```
 
 # Cron Jobs for Periodic Tasks
@@ -1034,4 +1034,42 @@ using powerful search capabilities.
 ```bash
 source .env
 envsubst < paperless-ngx/manifest.yaml | kubectl apply -f -
+```
+
+# OpenCloud File Sharing (PosixFS, NFS-backed)
+
+OpenCloud runs as a single container (`opencloudeu/opencloud-rolling`) in its
+own `opencloud` namespace. User files are stored as plain files via the
+PosixFS driver in collaborative mode on a Longhorn-backed volume:
+
+## Deploy (same norm as paperless)
+
+```bash
+source .env
+envsubst < opencloud/pvc.yaml | kubectl apply -f -
+envsubst < opencloud/opencloud-deploy.yaml | kubectl apply -f -
+```
+
+Verify:
+
+```bash
+kubectl -n opencloud get pvc,pods,svc,ingress
+kubectl -n opencloud logs deploy/opencloud -c opencloud --tail=50
+```
+
+# Claimctl
+
+The chart is published to GHCR as an OCI artifact, so this directory only
+holds the values overlay (`claimctl/values.yaml`).
+
+```bash
+source .env
+helm upgrade --install claimctl \
+    oci://ghcr.io/thetaqitahmid/claimctl/helm/claimctl \
+    --version 0.1.0 \
+    --namespace claimctl --create-namespace --wait \
+    --values claimctl/values.yaml \
+    --set ingress.hosts[0].host=$CLAIMCTL_HOST \
+    --set ingress.tls[0].hosts[0]=$CLAIMCTL_HOST \
+    --set ingress.tls[0].secretName="claimctl-tls"
 ```

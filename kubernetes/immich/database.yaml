@@ -37,6 +37,7 @@ spec:
       labels:
         app: immich-postgres
     spec:
+      nodeName: vm9
       securityContext:
         fsGroup: 999
       containers:

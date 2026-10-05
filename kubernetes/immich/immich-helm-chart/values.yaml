@@ -4,18 +4,28 @@
 
 # These entries are shared between all the Immich components
 
-env:
-  REDIS_HOSTNAME: '{{ printf "%s-valkey" .Release.Name }}'
-  DB_HOSTNAME: immich-postgres-0.immich-postgres.immich.svc.cluster.local
-  DB_USERNAME: placeholder
-  DB_DATABASE_NAME: immich
-  # -- You should provide your own secret outside of this helm-chart and use `postgresql.global.postgresql.auth.existingSecret` to provide credentials to the postgresql instance
-  DB_PASSWORD: placeholder
-  IMMICH_IGNORE_MOUNT_CHECK_ERRORS: "true"
-  IMMICH_MACHINE_LEARNING_URL: '{{ printf "http://%s-machine-learning:3003" .Release.Name }}'
-
-image:
-  tag: v2.0.1
+controllers:
+  main:
+    containers:
+      main:
+        image:
+          tag: v3.0.0
+        env:
+          REDIS_HOSTNAME: '{{ printf "%s-valkey" .Release.Name }}'
+          DB_HOSTNAME: immich-postgres-0.immich-postgres.immich.svc.cluster.local
+          DB_DATABASE_NAME: immich
+          DB_USERNAME:
+            valueFrom:
+              secretKeyRef:
+                name: immich-postgres-secret
+                key: POSTGRES_USER
+          DB_PASSWORD:
+            valueFrom:
+              secretKeyRef:
+                name: immich-postgres-secret
+                key: POSTGRES_PASSWORD
+          IMMICH_IGNORE_MOUNT_CHECK_ERRORS: "true"
+          IMMICH_MACHINE_LEARNING_URL: '{{ printf "http://%s-machine-learning:3003" .Release.Name }}'
 
 immich:
   metrics:
@@ -38,29 +48,29 @@ immich:
       enabled: true
       template: "{{y}}/{{y}}-{{MM}}-{{dd}}/{{filename}}"
 
-redis:
-  enabled: false
-
 valkey:
   enabled: true
   image:
     repository: docker.io/valkey/valkey
-    tag: 8.0-alpine
+    tag: 9.1-alpine@sha256:a35428eba9043cc0b79dbe54100f0c92784f2de00ad09b01182bfb1c5c83d1bd
     pullPolicy: IfNotPresent
   persistence:
     data:
       enabled: true
+      type: persistentVolumeClaim
       size: 1Gi
-      # Optional: Set this to pvc to keep job queues persistent
-      type: pvc
       accessMode: ReadWriteOnce
 
 # Immich components
 server:
   enabled: true
-  image:
-    repository: ghcr.io/immich-app/immich-server
-    pullPolicy: IfNotPresent
+  controllers:
+    main:
+      containers:
+        main:
+          image:
+            repository: ghcr.io/immich-app/immich-server
+            pullPolicy: IfNotPresent
   ingress:
     main:
       enabled: true
@@ -86,7 +96,6 @@ machine-learning:
   persistence:
     cache:
       enabled: true
+      type: persistentVolumeClaim
       size: 10Gi
-      # Optional: Set this to pvc to avoid downloading the ML models every start.
-      type: pvc
       accessMode: ReadWriteMany

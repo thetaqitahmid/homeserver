@@ -76,6 +76,10 @@ resource "proxmox_virtual_environment_vm" "ubuntu_vm" {
     bridge = "vmbr0"
   }
   depends_on = [proxmox_virtual_environment_download_file.ubuntu_cloud_image]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "proxmox_virtual_environment_download_file" "ubuntu_cloud_image" {
@@ -83,8 +87,10 @@ resource "proxmox_virtual_environment_download_file" "ubuntu_cloud_image" {
   content_type = "iso"
   datastore_id = "local"
   node_name    = each.key
+  overwrite    = false
 
-  url = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+  file_name = "noble-server-cloudimg-amd64-${each.key}.img"
+  url       = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 }
 
 data "proxmox_virtual_environment_hosts" "hosts" {

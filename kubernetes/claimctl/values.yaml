@@ -1,0 +1,279 @@
+# Values for the claimctl Helm chart (OCI: ghcr.io/thetaqitahmid/claimctl/helm).
+#
+# This file overrides the published chart's defaults for the houselab
+# deployment. Install with:
+#
+#   helm upgrade --install claimctl \
+#     oci://ghcr.io/thetaqitahmid/claimctl/helm/claimctl \
+#     --version 0.1.0 \
+#     --namespace claimctl --create-namespace --wait \
+#     --values claimctl/values.yaml
+#
+# See README.md in this directory for details.
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+keyGeneration:
+  # Auto-generates APP_ENCRYPTION_KEY and stores it in a Secret.
+  # In production prefer appEncryption.existingSecret and manage the key
+  # externally.
+  enabled: true
+  image:
+    repository: bitnamilegacy/kubectl
+    tag: "1.33.4"
+    pullPolicy: IfNotPresent
+  secretName: ""
+  keyName: "app-encryption-key"
+
+backend:
+  replicaCount: 1
+  strategy: {}
+  revisionHistoryLimit: 10
+  podAnnotations: {}
+  podLabels: {}
+  priorityClassName: ""
+  topologySpreadConstraints: []
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+        - ALL
+  extraEnv: []
+  waitForDb:
+    enabled: true
+    image:
+      repository: postgres
+      tag: "18-alpine"
+      pullPolicy: IfNotPresent
+  pdb:
+    enabled: false
+    minAvailable: 1
+    maxUnavailable: ""
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    behavior: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  image:
+    repository: ghcr.io/thetaqitahmid/claimctl/backend
+    pullPolicy: Always
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 3000
+  otel:
+    endpoint: ""
+  sslMode: "disable"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  startupProbe:
+    httpGet:
+      path: /v1/ready
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+  livenessProbe:
+    httpGet:
+      path: /v1/health
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /v1/ready
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+frontend:
+  replicaCount: 1
+  strategy: {}
+  revisionHistoryLimit: 10
+  podAnnotations: {}
+  podLabels: {}
+  priorityClassName: ""
+  topologySpreadConstraints: []
+  pdb:
+    enabled: false
+    minAvailable: 1
+    maxUnavailable: ""
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+    behavior: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  image:
+    repository: ghcr.io/thetaqitahmid/claimctl/frontend
+    pullPolicy: Always
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  startupProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+        - ALL
+  extraEnv: []
+
+ingress:
+  enabled: true
+  className: "traefik"
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    cert-manager.io/cluster-issuer: "acme-issuer"
+  hosts:
+    - host: claimctl.tahmidcloud.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+          port: 80
+        - path: /api
+          pathType: Prefix
+          service: backend
+          port: 3000
+  tls:
+    - secretName: claimctl-tls
+      hosts:
+        - "claimctl.tahmidcloud.com"
+
+db:
+  host: db
+  port: 5432
+  user: devuser
+  name: devdb
+  password: devpass
+  # In production, provide an existingSecret instead of plaintext values.
+  # existingSecret: "my-db-secret"
+  # existingSecretUserKey: "db-user"
+  # existingSecretPasswordKey: "db-password"
+  # existingSecretNameKey: "db-name"
+
+appEncryption:
+  # Provide an existing Kubernetes secret to manage APP_ENCRYPTION_KEY outside
+  # Helm. The key must be stable across replicas and restarts.
+  existingSecret: ""
+  secretKey: "app-encryption-key"
+
+networkPolicy:
+  # Requires the ingress controller selector below to be configured so traffic
+  # can reach the workloads.
+  enabled: false
+  ingressController:
+    namespaceSelector: {}
+    podSelector: {}
+  externalDbCIDRs: []
+
+postgres:
+  # Bundled single-replica PostgreSQL for dev/small installs. For production
+  # either provide an existingSecret for credentials or use an external DB.
+  enabled: true
+  nameOverride: ""
+  fullnameOverride: ""
+  affinity: {}
+  podLabels: {}
+  nodeSelector: {}
+  settings:
+    superuserPassword:
+      value: "superpass"
+      #   existingSecret: "my-postgres-secret"
+      #   secretKey: "admin-password"
+  userDatabase:
+    # existingSecret: "my-app-db-secret"
+    # name:
+    #   secretKey: "db-name"
+    # user:
+    #   secretKey: "db-user"
+    # password:
+    #   secretKey: "db-password"
+    name:
+      value: "devdb"
+    user:
+      value: "devuser"
+    password:
+      value: "devpass"
+  storage:
+    requestedSize: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    className: "longhorn"

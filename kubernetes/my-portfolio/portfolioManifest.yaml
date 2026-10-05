@@ -15,11 +15,9 @@ spec:
       labels:
         app: portfolio-app
     spec:
-      imagePullSecrets:
-        - name: docker-registry-credentials
       containers:
         - name: portfolio-app
-          image: "${DOCKER_REGISTRY_HOST}/taqi/portfolio:latest"
+          image: ghcr.io/thetaqitahmid/my-portfolio:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80

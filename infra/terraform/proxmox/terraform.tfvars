@@ -25,6 +25,7 @@ vms = [
   #   memory      = 4096
   #   disk_size   = 20
   # },
+
   {
     name        = "vm8"
     node_name   = "homeserver3"
@@ -66,7 +67,7 @@ vms = [
     gateway     = "192.168.1.1"
     dns_servers = ["1.1.1.1"]
     cores       = 2
-    memory      = 2048
+    memory      = 4096
     disk_size   = 20
   }
 ]
