@@ -83,8 +83,19 @@ if set -q OPENCLOUD_ADMIN_PASSWORD; and test -n "$OPENCLOUD_ADMIN_PASSWORD"
 end
 ```
 
-The command refuses to overwrite an existing Secret. The password is neither a
-command line argument nor written to a temporary file. Changing this Secret is
+When adopting a Deployment that previously used inline passwords, Kubernetes
+may reject Flux's dry run because the old `value` survives alongside the new
+`valueFrom`. An explicit empty `value` in Git was insufficient during the live
+adoption. A one-time strategic merge patch removed `value` from both password
+entries and set their Secret references after verifying the Secret matched the
+live password. This triggered a successful rollout; subsequent Flux
+reconciliation succeeded. The legacy last-applied annotation was also removed
+because it could retain inline credentials. For another cluster, perform this
+migration deliberately before adoption; do not delete the Deployment or enable
+forced resource replacement to work around it.
+
+The Secret creation command refuses to overwrite an existing Secret. The
+password is neither a command line argument nor written to a temporary file. Changing this Secret is
 not an account password reset; OpenCloud initializes its account on first use.
 The live `opencloud-data` (20Gi) and `opencloud-config` (5Gi) claims were checked
 against the manifests: both use Longhorn and `ReadWriteOnce`. These claims are
