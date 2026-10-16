@@ -216,8 +216,15 @@ The Git source is configured as follows:
 ```text
 Repository: https://github.com/TheTaqiTahmid/homeserver.git
 Branch:     master
-Path:       ./flux/clusters/homelab
+Path:       ./kubernetes/flux/clusters/homelab
 ```
+
+Flux source paths are relative to the Git repository root, not the local
+`kubernetes/` working directory. The root path is
+`./kubernetes/flux/clusters/homelab`, application paths begin with
+`./kubernetes/flux/apps/`, and AdGuard's chart path is
+`./kubernetes/adguard-helm-chart`. Local `kubectl -k` commands in this guide
+still run from the `kubernetes/` directory and therefore omit that prefix.
 
 The public HTTPS source needs no Git credential Secret. If the repository
 becomes private, provision Git authentication and configure
@@ -313,6 +320,20 @@ flux logs --level=error --all-namespaces
 
 Common causes include missing hostname keys, missing Secret keys, unavailable
 charts or images, storage that cannot attach, and an unready certificate issuer.
+
+For `kustomization path not found`, check the fetched Git revision and confirm
+that `spec.path` exists relative to the repository root. If the root itself has
+a wrong path, pushing a fix alone cannot repair it: the root cannot render the
+commit that would update its own configuration. After pushing the corrected
+paths, reapply the entry point from the local `kubernetes/` directory:
+
+```sh
+kubectl apply -k flux/clusters/homelab
+flux reconcile source git homelab --namespace=flux-system
+flux reconcile kustomization homelab --namespace=flux-system --with-source
+```
+
+This repairs the live root path and updates the child paths as well.
 Logs can contain application details; review them before sharing.
 
 For an emergency pause, suspend the root first and then the affected child:

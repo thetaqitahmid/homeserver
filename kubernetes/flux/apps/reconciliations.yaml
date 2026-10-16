@@ -6,7 +6,7 @@ metadata:
 spec:
   suspend: false
   interval: 10m
-  path: ./flux/apps/adguard
+  path: ./kubernetes/flux/apps/adguard
   prune: false
   deletionPolicy: Orphan
   wait: true
@@ -28,7 +28,7 @@ metadata:
 spec:
   suspend: false
   interval: 10m
-  path: ./flux/apps/my-portfolio
+  path: ./kubernetes/flux/apps/my-portfolio
   prune: false
   deletionPolicy: Orphan
   wait: true
@@ -50,7 +50,7 @@ metadata:
 spec:
   suspend: false
   interval: 10m
-  path: ./flux/apps/opencloud
+  path: ./kubernetes/flux/apps/opencloud
   prune: false
   deletionPolicy: Orphan
   wait: true
@@ -72,7 +72,7 @@ metadata:
 spec:
   suspend: false
   interval: 10m
-  path: ./flux/apps/stirling-pdf
+  path: ./kubernetes/flux/apps/stirling-pdf
   prune: false
   deletionPolicy: Orphan
   wait: true

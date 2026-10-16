@@ -7,6 +7,7 @@ import yaml
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+REPOSITORY_ROOT = ROOT.parent
 
 
 def build(path):
@@ -22,6 +23,9 @@ def build(path):
 class FluxManifestsTest(unittest.TestCase):
     def test_cluster_wires_isolated_apps_without_pruning(self):
         resources = build("flux/clusters/homelab")
+        root = next(item for item in resources if item["kind"] == "Kustomization" and item["metadata"]["name"] == "homelab")
+        self.assertEqual((REPOSITORY_ROOT / root["spec"]["path"]).resolve(), ROOT / "flux/clusters/homelab")
+        build(REPOSITORY_ROOT / root["spec"]["path"])
         apps = [item for item in resources if item["metadata"]["name"].startswith("app-")]
         self.assertEqual(len(apps), 4)
         for app in apps:
@@ -33,7 +37,7 @@ class FluxManifestsTest(unittest.TestCase):
                     app["spec"]["postBuild"]["substituteFrom"],
                     [{"kind": "ConfigMap", "name": "ingress-hostnames", "optional": False}],
                 )
-                build(app["spec"]["path"])
+                build(REPOSITORY_ROOT / app["spec"]["path"])
         self.assertFalse(any(item["kind"] == "ConfigMap" for item in resources))
 
     def test_hostnames_are_declared_and_no_secrets_are_rendered(self):
@@ -49,7 +53,9 @@ class FluxManifestsTest(unittest.TestCase):
         release = build("flux/apps/adguard")[0]
         self.assertEqual(release["spec"]["releaseName"], "adguard")
         self.assertEqual(release["metadata"]["namespace"], "adguard")
-        self.assertEqual(release["spec"]["chart"]["spec"]["version"], "0.1.0")
+        chart = release["spec"]["chart"]["spec"]
+        self.assertEqual(chart["version"], "0.1.0")
+        self.assertTrue((REPOSITORY_ROOT / chart["chart"] / "Chart.yaml").is_file())
         self.assertRegex(release["spec"]["values"]["image"]["tag"], r"@sha256:[a-f0-9]{64}$")
 
     def test_portfolio_pins_running_image(self):
