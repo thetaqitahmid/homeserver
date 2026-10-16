@@ -24,7 +24,7 @@ spec:
         fsGroup: 1000
       initContainers:
         - name: init
-          image: "${OPENCLOUD_IMAGE}"
+          image: opencloudeu/opencloud-rolling@sha256:8fc64ca861739cc62095cd558814f2eba6a90acf5998d884e439b33a47875da8
           command: ["/bin/sh", "-c"]
           # Prints/sets the initial admin password on first start only.
           # NOTE: --insecure must be explicit; default "ask" blocks on stdin and loops forever in K8s.
@@ -33,7 +33,10 @@ spec:
             - name: OC_INSECURE
               value: "false"
             - name: IDM_ADMIN_PASSWORD
-              value: "${OPENCLOUD_ADMIN_PASSWORD}"
+              valueFrom:
+                secretKeyRef:
+                  name: opencloud-admin
+                  key: password
             - name: IDM_CREATE_DEMO_USERS
               value: "false"
             - name: OC_URL
@@ -45,7 +48,7 @@ spec:
               mountPath: /etc/opencloud
       containers:
         - name: opencloud
-          image: "${OPENCLOUD_IMAGE}"
+          image: opencloudeu/opencloud-rolling@sha256:8fc64ca861739cc62095cd558814f2eba6a90acf5998d884e439b33a47875da8
           command: ["/bin/sh", "-c"]
           args: ["opencloud server"]
           ports:
@@ -69,7 +72,10 @@ spec:
             - name: IDM_CREATE_DEMO_USERS
               value: "false"
             - name: IDM_ADMIN_PASSWORD
-              value: "${OPENCLOUD_ADMIN_PASSWORD}"
+              valueFrom:
+                secretKeyRef:
+                  name: opencloud-admin
+                  key: password
           volumeMounts:
             - name: data
               mountPath: /var/lib/opencloud
@@ -124,11 +130,7 @@ metadata:
   namespace: opencloud
   annotations:
     cert-manager.io/cluster-issuer: "acme-issuer"
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
-    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
 spec:
-  ingressClassName: nginx
   tls:
     - hosts:
         - "${OPENCLOUD_HOST}"

@@ -1039,8 +1039,14 @@ envsubst < paperless-ngx/manifest.yaml | kubectl apply -f -
 # OpenCloud File Sharing (PosixFS, NFS-backed)
 
 OpenCloud runs as a single container (`opencloudeu/opencloud-rolling`) in its
-own `opencloud` namespace. User files are stored as plain files via the
-PosixFS driver in collaborative mode on a Longhorn-backed volume:
+own `opencloud` namespace. Its init and server images are pinned to the observed
+running digest. User files are stored as plain files via the PosixFS driver in
+collaborative mode on a Longhorn-backed volume.
+
+Both containers reference the `password` key in the manually provisioned
+`opencloud-admin` Secret instead of substituting a password into the Deployment.
+For Flux adoption, hostname configuration, and Secret recovery instructions,
+see [flux/README.md](flux/README.md). The Secret must exist before deploying.
 
 ## Deploy (same norm as paperless)
 
