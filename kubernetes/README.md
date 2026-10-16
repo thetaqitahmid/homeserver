@@ -1,5 +1,18 @@
 # Setup K3s Kubernetes Cluster
 
+## Deploy applications with Flux CD
+
+See the [Flux installation and application deployment guide](flux/README.md)
+for installing Flux controllers in this cluster, configuring private ingress
+hostnames and application Secrets, and deploying or adopting AdGuard Home,
+the portfolio site, OpenCloud, and Stirling PDF. The guide also covers staged
+adoption, reconciliation checks, updates, troubleshooting, and recovery.
+
+The platform setup and manual application commands below remain useful for
+bootstrap and reference. Once an application is managed by Flux, make its
+configuration changes in Git instead of continuing manual Helm upgrades or
+applying its workload manifests directly.
+
 ## MetalLB Load Balancer Setup
 
 MetalLB is a load balancer implementation for bare metal Kubernetes clusters.

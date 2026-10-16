@@ -1,0 +1,28 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: adguard
+  namespace: adguard
+spec:
+  interval: 10m
+  releaseName: adguard
+  targetNamespace: adguard
+  chart:
+    spec:
+      chart: ./adguard-helm-chart
+      version: "0.1.0"
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: homelab
+        namespace: flux-system
+  values:
+    namespace: adguard
+    host: ${ADGUARD_HOST}
+    image:
+      tag: latest@sha256:aba9e3bf0613be3ba3755e1fc311b126e2c24bec25e18b6483894a88283074f0
+    ingress:
+      hosts:
+        - host: ${ADGUARD_HOST}
+          paths:
+            - /

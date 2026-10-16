@@ -1,0 +1,12 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homelab
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./flux/clusters/homelab
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: homelab

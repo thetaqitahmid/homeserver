@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingress-hostnames
+  namespace: flux-system
+  labels:
+    reconcile.fluxcd.io/watch: Enabled
+data:
+  ADGUARD_HOST: adguard.example.com
+  PORTFOLIO_HOST: portfolio.example.com
+  OPENCLOUD_HOST: files.example.com
+  STIRLING_PDF_HOST: pdf.example.com
