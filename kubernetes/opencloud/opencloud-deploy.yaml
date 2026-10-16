@@ -33,6 +33,7 @@ spec:
             - name: OC_INSECURE
               value: "false"
             - name: IDM_ADMIN_PASSWORD
+              value: ""
               valueFrom:
                 secretKeyRef:
                   name: opencloud-admin
@@ -72,6 +73,7 @@ spec:
             - name: IDM_CREATE_DEMO_USERS
               value: "false"
             - name: IDM_ADMIN_PASSWORD
+              value: ""
               valueFrom:
                 secretKeyRef:
                   name: opencloud-admin

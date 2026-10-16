@@ -74,7 +74,7 @@ class FluxManifestsTest(unittest.TestCase):
         for container in containers:
             self.assertRegex(container["image"], r"@sha256:[a-f0-9]{64}$")
             password = next(env for env in container["env"] if env["name"] == "IDM_ADMIN_PASSWORD")
-            self.assertNotIn("value", password)
+            self.assertEqual(password["value"], "")
             self.assertEqual(
                 password["valueFrom"]["secretKeyRef"],
                 {"name": "opencloud-admin", "key": "password"},
