@@ -1,0 +1,82 @@
+fullnameOverride: stirling-pdf
+replicaCount: 1
+strategy:
+  type: Recreate
+
+image:
+  tag: "3.1.0"
+  pullPolicy: IfNotPresent
+
+envs:
+  - name: SECURITY_ENABLELOGIN
+    value: "true"
+  - name: SECURITY_LOGINMETHOD
+    value: normal
+  - name: SECURITY_OAUTH2_BLOCKREGISTRATION
+    value: "true"
+  - name: SECURITY_SAML2_BLOCKREGISTRATION
+    value: "true"
+  - name: SECURITY_INITIALLOGIN_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: stirling-pdf-admin
+        key: username
+  - name: SECURITY_INITIALLOGIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: stirling-pdf-admin
+        key: password
+  - name: SYSTEM_FRONTENDURL
+    value: https://${STIRLING_PDF_HOST}
+  - name: SYSTEM_ENABLEANALYTICS
+    value: "false"
+
+persistence:
+  enabled: true
+  storageClass: longhorn-2x
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  path: /tmp
+
+deployment:
+  extraVolumeMounts:
+    - name: storage-volume
+      mountPath: /configs
+      subPath: configs
+    - name: storage-volume
+      mountPath: /storage
+      subPath: storage
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+probes:
+  liveness:
+    initialDelaySeconds: 180
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  pathType: Prefix
+  annotations:
+    cert-manager.io/cluster-issuer: acme-issuer
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+  hosts:
+    - name: "${STIRLING_PDF_HOST}"
+      path: /
+      tls: true
+      tlsSecret: stirling-pdf-tls

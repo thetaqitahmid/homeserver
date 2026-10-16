@@ -1079,3 +1079,38 @@ helm upgrade --install claimctl \
     --set ingress.tls[0].hosts[0]=$CLAIMCTL_HOST \
     --set ingress.tls[0].secretName="claimctl-tls"
 ```
+
+# Stirling PDF
+
+Stirling PDF provides PDF editing tools with password authentication and
+persistent storage. Set the domain in `.env`:
+
+```fish
+set -x STIRLING_PDF_HOST "pdf.tahmidcloud.com"
+```
+
+Create the initial admin Secret once before deploying:
+
+```fish
+source .env
+kubectl create namespace stirling-pdf --dry-run=client -o yaml | kubectl apply -f -
+read --silent --prompt-str 'Initial admin password: ' STIRLING_PDF_ADMIN_PASSWORD
+printf '%s' "$STIRLING_PDF_ADMIN_PASSWORD" | kubectl create secret generic stirling-pdf-admin \
+    --namespace stirling-pdf --from-literal=username=admin --from-file=password=/dev/stdin
+set -e STIRLING_PDF_ADMIN_PASSWORD
+```
+
+Deploy or upgrade:
+
+```fish
+source .env
+helm repo add stirling-pdf https://stirling-tools.github.io/Stirling-PDF-chart
+helm repo update stirling-pdf
+envsubst '${STIRLING_PDF_HOST}' < stirling-pdf/values.yaml | helm upgrade --install \
+    stirling-pdf stirling-pdf/stirling-pdf-chart \
+    --version 3.1.0 --namespace stirling-pdf \
+    --values - --rollback-on-failure --wait --timeout 12m
+```
+
+Log in as `admin` with the password supplied above. Changing the Secret does
+not reset an existing account. Back up persistent data before uninstalling.
