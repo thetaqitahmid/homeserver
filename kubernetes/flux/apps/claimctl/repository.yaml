@@ -1,0 +1,9 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: claimctl
+  namespace: claimctl
+spec:
+  type: oci
+  interval: 1h
+  url: oci://ghcr.io/thetaqitahmid/claimctl/helm

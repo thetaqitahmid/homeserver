@@ -1,6 +1,28 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: app-claimctl
+  namespace: flux-system
+spec:
+  suspend: false
+  interval: 10m
+  path: ./kubernetes/flux/apps/claimctl
+  prune: false
+  deletionPolicy: Orphan
+  wait: true
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: homelab
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: ingress-hostnames
+        optional: false
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: app-adguard
   namespace: flux-system
 spec:

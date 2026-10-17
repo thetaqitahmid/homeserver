@@ -1,11 +1,14 @@
 # Flux CD application adoption
 
 The cluster entry point now includes AdGuard Home, the portfolio site,
-OpenCloud, and Stirling PDF. No workload changes have been applied by creating
-these files. OpenCloud's admin Secret was manually provisioned from `.env`.
+OpenCloud, Stirling PDF, and Claimctl. Claimctl's HelmRelease has also been
+applied locally and reconciled successfully; its child Git reconciliation will
+be created after the new files are published. Claimctl credentials are loaded
+from the ignored `.secrets/claimctl.env` file. OpenCloud's admin Secret was
+manually provisioned from `.env`.
 The root and application reconciliations all have pruning disabled. Application
 reconciliations use `deletionPolicy: Orphan` to preserve resources if removed.
-All four application Kustomizations currently set `spec.suspend: false`, so
+All five application Kustomizations currently set `spec.suspend: false`, so
 application reconciliation is enabled. The root remains active.
 
 ## Included applications
@@ -16,6 +19,7 @@ application reconciliation is enabled. The root remains active.
 | Portfolio | `my-portfolio` / ordinary manifests | Running image digest |
 | OpenCloud | `opencloud` / ordinary manifests | Running image digest for init and server |
 | Stirling PDF | `stirling-pdf` / `stirling-pdf` | Chart `3.1.0`, image `3.1.0` |
+| Claimctl | `claimctl` / `claimctl` | OCI chart `0.1.0`; running backend, frontend, and PostgreSQL image digests |
 
 The three deployments using `latest` were checked against their running pods'
 `imageID` fields. Their observed digests are pinned in the Flux overlays, so
@@ -33,17 +37,17 @@ release changes. Stirling's Helm repository chart version is an exact pin.
 ## Private hostname configuration
 
 Create a private copy of `flux/ingress-hostnames.example.yaml` outside the
-repository, replace all four example hostnames, and apply it:
+repository, replace all five example hostnames, and apply it:
 
 ```sh
 kubectl apply -f /private/path/ingress-hostnames.yaml
 ```
 
 The ConfigMap must be named `ingress-hostnames` in `flux-system` and contain
-nonempty `ADGUARD_HOST`, `PORTFOLIO_HOST`, `OPENCLOUD_HOST`, and
-`STIRLING_PDF_HOST` keys. The
+nonempty `ADGUARD_HOST`, `PORTFOLIO_HOST`, `OPENCLOUD_HOST`,
+`STIRLING_PDF_HOST`, and `CLAIMCTL_HOST` keys. The
 example file is deliberately not included in the cluster entry point. Do not
-commit private hostname values. All four child reconciliations require this
+commit private hostname values. All five child reconciliations require this
 ConfigMap through `postBuild.substituteFrom`; they fail if it does not exist.
 The watch label triggers reconciliation when hostnames change.
 
@@ -104,6 +108,39 @@ included with pruning disabled; preserve their data and back them up separately.
 AdGuard's existing `adguard/adguard` release is the adoption target, not the
 historical release with the same name in `default`. The local chart still
 renders its existing workload, Service, ingress, and PVC names.
+
+### Claimctl credentials and adoption
+
+Provision `claimctl-credentials` in `claimctl` from the ignored private file
+`.secrets/claimctl.env` using the [root README](../README.md#claimctl).
+Required keys are `db-name`, `db-user`, `db-password`, `admin-password`, and
+`app-encryption-key`. Both the backend and PostgreSQL use these references.
+No credentials are stored in the generated values ConfigMap or HelmRelease.
+The encryption key must remain stable; keep it with your secure database backups.
+
+During the live migration, credentials were copied from the existing Secrets
+without printing their values, saved with mode `0600`, and loaded into the new
+Secret. Backend and PostgreSQL credentials were checked for equality first.
+The hostname key was added to the private ConfigMap using the existing `.env`
+value. The existing PostgreSQL StatefulSet and its 1Gi Longhorn PVC were retained.
+No credentials were rotated, so the old development passwords still need a
+separate deliberate rotation if this installation is used beyond testing.
+
+The Helm server side adoption needed two one time strategic merge patches:
+remove the inline `value` from backend `DB_NAME` while setting its new
+`secretKeyRef`, and delete the obsolete `generate-app-key` init container.
+Otherwise Kubernetes rejects the mixed `value`/`valueFrom` entry, and the stale
+init container fails after its API token access is disabled. After these patches,
+`flux reconcile helmrelease claimctl --namespace=claimctl --reset` succeeded.
+Both backend and PostgreSQL completed their rollouts. No forced replacement or
+PVC deletion was needed. Existing Helm release history can retain old plaintext
+values; moving to Secret references does not sanitize historical revisions or
+rotate credentials. Handle those historical records according to your retention
+and credential rotation policy.
+
+The new HelmRelease was applied locally to verify adoption. Commit and push the
+configuration to `master` to let the root create `app-claimctl` and manage its
+values from Git. Until then, the child does not exist in the live root inventory.
 
 ## Configure Flux in the cluster
 
@@ -204,6 +241,7 @@ kubectl apply -f /private/path/ingress-hostnames.yaml
 kubectl get configmap ingress-hostnames --namespace=flux-system
 kubectl get secret opencloud-admin --namespace=opencloud
 kubectl get secret stirling-pdf-admin --namespace=stirling-pdf
+kubectl get secret claimctl-credentials --namespace=claimctl
 kubectl get clusterissuer acme-issuer
 kubectl get storageclass longhorn longhorn-2x
 kubectl get pvc --namespace=adguard
@@ -211,7 +249,7 @@ kubectl get pvc --namespace=opencloud
 kubectl get pvc --namespace=stirling-pdf
 ```
 
-Verify all four hostname keys contain real, nonempty hostnames and that DNS
+Verify all five hostname keys contain real, nonempty hostnames and that DNS
 points to the intended ingress controller. Check that the referenced Secrets
 have their required keys without printing their values. Recreate missing
 Secrets using the recovery instructions; do not put them into Git. Confirm
@@ -251,6 +289,10 @@ kubectl kustomize flux/apps/adguard
 kubectl kustomize flux/apps/my-portfolio
 kubectl kustomize flux/apps/stirling-pdf
 kubectl kustomize flux/apps/opencloud
+kubectl kustomize flux/apps/claimctl
+helm pull oci://ghcr.io/thetaqitahmid/claimctl/helm/claimctl \
+  --version 0.1.0 --untar --untardir /tmp/claimctl-validation
+CLAIMCTL_CHART=/tmp/claimctl-validation/claimctl python -m unittest discover -s flux/tests -v
 git diff --check
 ```
 
@@ -261,7 +303,7 @@ Flux reads the remote branch, not your working tree; uncommitted or unpushed
 changes will not be deployed.
 
 All application Kustomizations in `flux/apps/reconciliations.yaml` currently
-set `spec.suspend: false`, enabling all four applications. For staged adoption,
+set `spec.suspend: false`, enabling all five applications. For staged adoption,
 set `spec.suspend: true` on the applications you want to defer before committing
 and pushing. Set each back to `false` in Git when ready. This avoids a race
 where all apps begin reconciling before an imperative suspend command.
@@ -278,8 +320,8 @@ flux get kustomizations --namespace=flux-system
 ```
 
 The root creates `app-adguard`, `app-my-portfolio`, `app-opencloud`, and
-`app-stirling-pdf`. Each child reads its hostname values from the private
-ConfigMap. AdGuard and Stirling are adopted through HelmRelease resources;
+`app-stirling-pdf`, plus `app-claimctl`. Each child reads its hostname values from the private
+ConfigMap. AdGuard, Stirling, and Claimctl are adopted through HelmRelease resources;
 OpenCloud and the portfolio site are applied as ordinary Kubernetes manifests.
 A child configured with `spec.suspend: true` will remain suspended.
 
@@ -292,16 +334,20 @@ flux reconcile kustomization app-adguard --namespace=flux-system --with-source
 flux reconcile kustomization app-my-portfolio --namespace=flux-system --with-source
 flux reconcile kustomization app-opencloud --namespace=flux-system --with-source
 flux reconcile kustomization app-stirling-pdf --namespace=flux-system --with-source
+flux reconcile kustomization app-claimctl --namespace=flux-system --with-source
 flux get kustomizations --namespace=flux-system
 flux get helmreleases --all-namespaces
 kubectl rollout status deployment/adguard-home --namespace=adguard --timeout=10m
 kubectl rollout status deployment/portfolio-app --namespace=my-portfolio --timeout=5m
 kubectl rollout status deployment/opencloud --namespace=opencloud --timeout=10m
 kubectl rollout status deployment/stirling-pdf --namespace=stirling-pdf --timeout=15m
+kubectl rollout status deployment/claimctl-backend --namespace=claimctl --timeout=10m
+kubectl rollout status deployment/claimctl-frontend --namespace=claimctl --timeout=10m
+kubectl rollout status statefulset/claimctl-postgres --namespace=claimctl --timeout=10m
 kubectl get ingress --all-namespaces
 ```
 
-Expect `Ready=True` for enabled child Kustomizations and both HelmReleases.
+Expect `Ready=True` for enabled child Kustomizations and all three HelmReleases.
 Check application URLs, TLS certificates, login behavior, and existing data.
 A digest change in a pod template can cause a rollout even when the underlying
 image is unchanged. Do not continue manual Helm upgrades or `kubectl apply` of
@@ -379,8 +425,7 @@ and [HelmRelease lifecycle](https://fluxcd.io/flux/components/helm/helmreleases/
 
 ## Deferred applications
 
-Claimctl still requires deliberate database credential and encryption Secret
-handling. qBittorrent requires VPN secrets. Monitoring requires admin credential
+qBittorrent requires VPN secrets. Monitoring requires admin credential
 handling. Jellyfin needs NFS configuration and storage adoption. Platform
 controllers are excluded to avoid changing cluster networking, certificates,
 or storage ownership in this

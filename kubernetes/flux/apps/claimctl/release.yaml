@@ -1,0 +1,31 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: claimctl
+  namespace: claimctl
+spec:
+  interval: 10m
+  timeout: 12m
+  releaseName: claimctl
+  targetNamespace: claimctl
+  chart:
+    spec:
+      chart: claimctl
+      version: "0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: claimctl
+  valuesFrom:
+    - kind: ConfigMap
+      name: claimctl-values
+      valuesKey: values.yaml
+  values:
+    backend:
+      image:
+        tag: latest@sha256:8a84835445ba114f2fe57a173ca758cadbd48359c24b122dc3f2a0abb2549625
+    frontend:
+      image:
+        tag: latest@sha256:0db54445cfc9b04d250d52c28c3292b75671d88cef428460594383e0381ba77f
+    postgres:
+      image:
+        tag: 18.1@sha256:1090bc3a8ccfb0b55f78a494d76f8d603434f7e4553543d6e807bc7bd6bbd17f

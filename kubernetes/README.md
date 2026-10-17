@@ -1078,20 +1078,47 @@ kubectl -n opencloud logs deploy/opencloud -c opencloud --tail=50
 
 # Claimctl
 
-The chart is published to GHCR as an OCI artifact, so this directory only
-holds the values overlay (`claimctl/values.yaml`).
+Claimctl is managed by the Flux app in `flux/apps/claimctl`, using the GHCR
+OCI chart pinned to `0.1.0`. The shared overlay is `claimctl/values.yaml`.
+Both ingress and TLS hostnames use `CLAIMCTL_HOST` from the private
+`flux-system/ingress-hostnames` ConfigMap, just like the other Flux apps.
+See [Flux application adoption](flux/README.md) for reconciliation commands.
 
-```bash
-source .env
-helm upgrade --install claimctl \
-    oci://ghcr.io/thetaqitahmid/claimctl/helm/claimctl \
-    --version 0.1.0 \
-    --namespace claimctl --create-namespace --wait \
-    --values claimctl/values.yaml \
-    --set ingress.hosts[0].host=$CLAIMCTL_HOST \
-    --set ingress.tls[0].hosts[0]=$CLAIMCTL_HOST \
-    --set ingress.tls[0].secretName="claimctl-tls"
+Provision credentials before enabling reconciliation. For a fresh install,
+copy the example to the ignored private file, restrict access, and replace every
+placeholder with your actual values. Do not source this file as shell code:
+
+```sh
+(umask 077; cp claimctl/credentials.env.example .secrets/claimctl.env)
+chmod 600 .secrets/claimctl.env
 ```
+
+The private file contains `db-name`, `db-user`, `db-password`, `admin-password`,
+and `app-encryption-key`. Use a strong database password and admin password,
+and generate the application encryption key in the format Claimctl expects.
+Keep that key stable and back it up securely: replacing it makes existing
+encrypted data unreadable. Never commit the private file.
+
+Create the Secret from the completed file:
+
+```sh
+kubectl create namespace claimctl --dry-run=client -o yaml | kubectl apply -f -
+kubectl create secret generic claimctl-credentials --namespace=claimctl \
+    --from-env-file=.secrets/claimctl.env
+```
+
+This command refuses to overwrite an existing Secret. The backend and bundled
+PostgreSQL reference its keys directly; neither Helm values nor Flux substitution
+contain credential values. Encryption key generation is disabled. For recovery,
+restore this file and the existing database volume together. Updating a Secret
+does not change passwords in an already initialized PostgreSQL database.
+
+The existing installation was migrated by saving its current credentials and
+encryption key in `.secrets/claimctl.env` and creating `claimctl-credentials`
+from that file. No database reset or credential rotation was performed. The
+running backend, frontend, and PostgreSQL images are pinned in the Flux release.
+See the Flux guide for the one time adoption patches and legacy Helm history
+considerations. Do not run manual Helm upgrades after Flux takes ownership.
 
 # Stirling PDF
 

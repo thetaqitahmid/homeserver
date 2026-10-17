@@ -1,16 +1,3 @@
-# Values for the claimctl Helm chart (OCI: ghcr.io/thetaqitahmid/claimctl/helm).
-#
-# This file overrides the published chart's defaults for the houselab
-# deployment. Install with:
-#
-#   helm upgrade --install claimctl \
-#     oci://ghcr.io/thetaqitahmid/claimctl/helm/claimctl \
-#     --version 0.1.0 \
-#     --namespace claimctl --create-namespace --wait \
-#     --values claimctl/values.yaml
-#
-# See README.md in this directory for details.
-
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
@@ -21,10 +8,7 @@ serviceAccount:
   name: ""
 
 keyGeneration:
-  # Auto-generates APP_ENCRYPTION_KEY and stores it in a Secret.
-  # In production prefer appEncryption.existingSecret and manage the key
-  # externally.
-  enabled: true
+  enabled: false
   image:
     repository: bitnamilegacy/kubectl
     tag: "1.33.4"
@@ -202,7 +186,7 @@ ingress:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     cert-manager.io/cluster-issuer: "acme-issuer"
   hosts:
-    - host: claimctl.tahmidcloud.com
+    - host: ${CLAIMCTL_HOST}
       paths:
         - path: /
           pathType: Prefix
@@ -215,24 +199,21 @@ ingress:
   tls:
     - secretName: claimctl-tls
       hosts:
-        - "claimctl.tahmidcloud.com"
+        - "${CLAIMCTL_HOST}"
 
 db:
   host: db
   port: 5432
-  user: devuser
-  name: devdb
-  password: devpass
-  # In production, provide an existingSecret instead of plaintext values.
-  # existingSecret: "my-db-secret"
-  # existingSecretUserKey: "db-user"
-  # existingSecretPasswordKey: "db-password"
-  # existingSecretNameKey: "db-name"
+  user: ""
+  name: ""
+  password: ""
+  existingSecret: claimctl-credentials
+  existingSecretUserKey: db-user
+  existingSecretPasswordKey: db-password
+  existingSecretNameKey: db-name
 
 appEncryption:
-  # Provide an existing Kubernetes secret to manage APP_ENCRYPTION_KEY outside
-  # Helm. The key must be stable across replicas and restarts.
-  existingSecret: ""
+  existingSecret: claimctl-credentials
   secretKey: "app-encryption-key"
 
 networkPolicy:
@@ -245,8 +226,6 @@ networkPolicy:
   externalDbCIDRs: []
 
 postgres:
-  # Bundled single-replica PostgreSQL for dev/small installs. For production
-  # either provide an existingSecret for credentials or use an external DB.
   enabled: true
   nameOverride: ""
   fullnameOverride: ""
@@ -254,24 +233,21 @@ postgres:
   podLabels: {}
   nodeSelector: {}
   settings:
+    existingSecret: claimctl-credentials
     superuserPassword:
-      value: "superpass"
-      #   existingSecret: "my-postgres-secret"
-      #   secretKey: "admin-password"
+      value: ""
+      secretKey: admin-password
   userDatabase:
-    # existingSecret: "my-app-db-secret"
-    # name:
-    #   secretKey: "db-name"
-    # user:
-    #   secretKey: "db-user"
-    # password:
-    #   secretKey: "db-password"
+    existingSecret: claimctl-credentials
     name:
-      value: "devdb"
+      value: ""
+      secretKey: db-name
     user:
-      value: "devuser"
+      value: ""
+      secretKey: db-user
     password:
-      value: "devpass"
+      value: ""
+      secretKey: db-password
   storage:
     requestedSize: 1Gi
     accessModes:
