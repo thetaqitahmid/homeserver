@@ -1,0 +1,82 @@
+name: immich
+
+services:
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-v3.3.3}
+    env_file:
+      - ${DOCKERDIR:-/home/taqi/docker}/immich/.env
+    volumes:
+      - type: bind
+        source: /media/immich
+        target: /data
+        bind:
+          create_host_path: false
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      disable: false
+    networks:
+      - default
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=t3_proxy"
+      - "traefik.http.routers.immich-rtr.rule=Host(`immich.docker.tahmidcloud.com`)"
+      - "traefik.http.routers.immich-rtr.entrypoints=websecure"
+      - "traefik.http.routers.immich-rtr.tls=true"
+      - "traefik.http.routers.immich-rtr.tls.certresolver=dns-cloudflare"
+      - "traefik.http.routers.immich-rtr.middlewares=middlewares-secure-headers@file"
+      - "traefik.http.routers.immich-rtr.service=immich-svc"
+      - "traefik.http.services.immich-svc.loadbalancer.server.port=2283"
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-v3.3.3}
+    env_file:
+      - ${DOCKERDIR:-/home/taqi/docker}/immich/.env
+    volumes:
+      - ${DOCKERDIR:-/home/taqi/docker}/immich/model-cache:/cache
+    restart: always
+    healthcheck:
+      disable: false
+    labels:
+      - "traefik.enable=false"
+
+  redis:
+    container_name: immich_redis
+    image: docker.io/valkey/valkey:9@sha256:c123e3715db63d06d4ad6964884037aa0d5d4d703939b9929954112889708e1d
+    command: valkey-server --appendonly yes
+    volumes:
+      - ${DOCKERDIR:-/home/taqi/docker}/immich/redis:/data
+    healthcheck:
+      test: redis-cli ping | grep -q PONG || exit 1
+    restart: always
+    labels:
+      - "traefik.enable=false"
+
+  database:
+    container_name: immich_postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in the Immich environment file}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_DB: ${DB_DATABASE_NAME:-immich}
+      POSTGRES_INITDB_ARGS: --data-checksums
+    volumes:
+      - ${DOCKERDIR:-/home/taqi/docker}/immich/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    restart: always
+    healthcheck:
+      disable: false
+    labels:
+      - "traefik.enable=false"
+
+networks:
+  t3_proxy:
+    external: true

@@ -103,6 +103,7 @@ lsblk |awk 'NR==1{print $0" DEVICE-ID(S)"}NR>1{dev=$1;printf $0" ";system("find 
 
 # Add disk to VM (example for VM ID 103)
 qm set 103 -scsi2 /dev/disk/by-id/usb-WD_BLACK_SN770_1TB_012938055C4B-0:0
+qm set 103 -scsi3 /dev/disk/by-id/wwn-0x5001b448c8488b85
 
 # Verify configuration
 grep 5C4B /etc/pve/qemu-server/103.conf

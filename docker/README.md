@@ -1,5 +1,9 @@
 # Homeserver Notes
 
+# Immich
+
+The Compose stack is in `immich.yaml`. See [Immich deployment and operations](immich/README.md) for storage paths, setup, validation, CPU compatibility, backups, and public routing requirements.
+
 # List of Service Running on Homeserver
 
 - Plex
