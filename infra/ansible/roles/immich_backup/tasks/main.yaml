@@ -1,0 +1,130 @@
+---
+- name: Validate backup settings
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+      - immich_backup_repository_password | default('') | length >= 32
+      - immich_backup_ssh_known_hosts | default('') | length > 0
+      - immich_backup_dump_max_age_seconds | int > 0
+      - immich_backup_read_data_percent | int >= 1
+      - immich_backup_read_data_percent | int <= 100
+    fail_msg: Configure the repository password in Vault and pin the Storage Box host key before deployment.
+  no_log: true
+
+- name: Install backup dependencies
+  ansible.builtin.apt:
+    name:
+      - restic
+      - openssh-client
+      - util-linux
+      - gzip
+    state: present
+    update_cache: true
+
+- name: Create private backup directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  loop:
+    - "{{ immich_backup_config_dir }}"
+    - "{{ immich_backup_state_dir }}"
+    - "{{ immich_backup_state_dir }}/cache"
+
+- name: Install an optional vaulted SSH key
+  ansible.builtin.copy:
+    content: "{{ immich_backup_ssh_private_key }}"
+    dest: "{{ immich_backup_config_dir }}/ssh_key"
+    owner: root
+    group: root
+    mode: '0600'
+  when: immich_backup_ssh_private_key is defined
+  no_log: true
+
+- name: Copy existing SSH key when no vaulted key is supplied
+  ansible.builtin.copy:
+    src: "{{ immich_backup_existing_key }}"
+    dest: "{{ immich_backup_config_dir }}/ssh_key"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0600'
+  when: immich_backup_ssh_private_key is not defined
+  no_log: true
+
+- name: Install repository password
+  ansible.builtin.copy:
+    content: "{{ immich_backup_repository_password }}\n"
+    dest: "{{ immich_backup_config_dir }}/repository_password"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+
+- name: Install pinned Storage Box host keys
+  ansible.builtin.copy:
+    content: "{{ immich_backup_ssh_known_hosts }}\n"
+    dest: "{{ immich_backup_config_dir }}/known_hosts"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Install SSH configuration
+  ansible.builtin.template:
+    src: ssh_config.j2
+    dest: "{{ immich_backup_config_dir }}/ssh_config"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Install backup command
+  ansible.builtin.template:
+    src: backup.sh.j2
+    dest: /usr/local/sbin/immich-backup
+    owner: root
+    group: root
+    mode: '0700'
+    validate: /bin/bash -n %s
+
+- name: Install systemd units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - immich-backup.service
+    - immich-backup.timer
+    - immich-backup-maintenance.service
+    - immich-backup-maintenance.timer
+  register: immich_backup_units
+
+- name: Reload systemd unit definitions
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: immich_backup_units.changed
+
+- name: Explicitly initialize the new repository
+  ansible.builtin.command: /usr/local/sbin/immich-backup init
+  when: immich_backup_initialize | bool
+  register: immich_backup_init_result
+  changed_when: "'created restic repository' in immich_backup_init_result.stdout"
+
+- name: Verify repository access before enabling timers
+  ansible.builtin.command: /usr/local/sbin/immich-backup snapshots
+  changed_when: false
+  when:
+    - immich_backup_timers_enabled | bool
+    - not ansible_check_mode
+
+- name: Configure backup timers
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: "{{ immich_backup_timers_enabled | bool }}"
+    state: "{{ 'started' if immich_backup_timers_enabled | bool else 'stopped' }}"
+  loop:
+    - immich-backup.timer
+    - immich-backup-maintenance.timer

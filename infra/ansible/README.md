@@ -105,6 +105,17 @@ The playbooks use the following variables, which can be customized in the
 - `vm_cores`: The number of CPU cores for the VM
 - `vm_disk_size`: The size of the VM disk
 
+## Immich backups
+
+The `immich_backup` role configures encrypted Restic backups from dockerhost to the Hetzner Storage Box. The role does not initialize a repository or enable timers by default; dockerhost explicitly opts into timers in its host variables. See [deployment, credentials, testing, and recovery](../../docker/immich/restore.md) before running it.
+
+```sh
+ansible-playbook playbooks/configure-immich-backup.yaml --syntax-check
+ansible-playbook playbooks/configure-immich-backup.yaml --limit dockerhost --ask-become-pass
+```
+
+The retired WireGuard role, playbook, and dedicated inventory settings have been removed. This does not stop or uninstall WireGuard on any host.
+
 ## Author
 
 - Taqi Tahmid (mdtaqitahmid@gmail.com)

@@ -1,6 +1,0 @@
-- name: Configure WireGuard
-  hosts: wireguard
-  vars_files:
-    - ../secrets/vault.yaml # Load the encrypted vault file
-  roles:
-    - configure-wireguard

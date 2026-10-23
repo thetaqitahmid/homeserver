@@ -93,6 +93,8 @@ Create the first administrator account once routing is correct. No account was c
 
 ## Backups
 
+The reproducible Restic setup is managed by the `immich_backup` Ansible role. See [backup deployment and recovery](restore.md) for credentials, explicit repository initialization, timer activation, and restore tests.
+
 Back up the entire `/media/immich` filesystem, including completed database dumps in `backups/`, to a separate destination. Automatic database dumps do not protect against failure of that disk. Verify that a recent dump completed before backing up the media. A separate dump is unnecessary if the built in backups are current and successful. For a consistent backup, stop the Immich server while creating the dump and capturing the media; if it stays running, follow the database first, media second ordering recommended by Immich.
 
 Preserve the private environment file securely outside Git and record the repository commit and deployed image versions with each backup. Restore with compatible application and database images before upgrading. Do not rely on copying a live PostgreSQL data directory as a consistent database backup. Test restoration into an isolated deployment.

@@ -1,0 +1,14 @@
+Host hetzner-backup
+    HostName {{ immich_backup_ssh_host }}
+    User {{ immich_backup_ssh_user }}
+    Port {{ immich_backup_ssh_port }}
+    IdentityFile {{ immich_backup_config_dir }}/ssh_key
+    IdentitiesOnly yes
+    IdentityAgent none
+    BatchMode yes
+    StrictHostKeyChecking yes
+    UserKnownHostsFile {{ immich_backup_config_dir }}/known_hosts
+    GlobalKnownHostsFile /dev/null
+    ConnectTimeout 30
+    ServerAliveInterval 60
+    ServerAliveCountMax 3

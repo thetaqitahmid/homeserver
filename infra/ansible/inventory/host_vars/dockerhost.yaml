@@ -1,0 +1,4 @@
+---
+immich_backup_timers_enabled: true
+immich_backup_ssh_known_hosts: >-
+  [u698571.your-storagebox.de]:23 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIICf9svRenC/PLKIL9nk6K/pxQgoiFC41wTNvoIncOxs

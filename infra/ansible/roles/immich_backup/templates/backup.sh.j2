@@ -1,0 +1,72 @@
+#!/bin/bash
+set -euo pipefail
+umask 077
+
+export RESTIC_REPOSITORY={{ immich_backup_repository | quote }}
+export RESTIC_PASSWORD_FILE={{ (immich_backup_config_dir ~ '/repository_password') | quote }}
+export RESTIC_CACHE_DIR={{ (immich_backup_state_dir ~ '/cache') | quote }}
+source_dir={{ immich_backup_source | quote }}
+compose_dir={{ immich_backup_compose_dir | quote }}
+state_dir={{ immich_backup_state_dir | quote }}
+snapshot_host={{ immich_backup_snapshot_host | quote }}
+
+restic_command() {
+    restic -o {{ ('sftp.command=ssh -F ' ~ immich_backup_config_dir ~ '/ssh_config hetzner-backup -s sftp') | quote }} "$@"
+}
+
+if [[ "${1:-backup}" == snapshots ]]; then
+    restic_command "$@"
+    exit 0
+fi
+
+exec 9>"$state_dir/job.lock"
+flock -n 9 || { echo 'Another backup or maintenance command is running.' >&2; exit 1; }
+
+case "${1:-backup}" in
+    init)
+        if restic_command snapshots >/dev/null 2>&1; then
+            echo 'Repository already accessible; initialization skipped.'
+        else
+            restic_command init
+        fi
+        ;;
+    backup)
+        mountpoint -q "$source_dir" || { echo 'Media filesystem is not mounted.' >&2; exit 1; }
+        latest_dump=$(find "$source_dir/backups" -maxdepth 1 -type f \
+            -name 'immich-db-backup-*.sql.gz' -printf '%T@ %p\n' | sort -nr | cut -d ' ' -f 2- | awk 'NR == 1 { print }')
+        [[ -n "$latest_dump" ]] || { echo 'No completed Immich database dump found.' >&2; exit 1; }
+        age=$(( $(date +%s) - $(stat -c %Y "$latest_dump") ))
+        if (( age < 0 || age > {{ immich_backup_dump_max_age_seconds | int }} )); then
+            echo 'Latest database dump is stale or has a future timestamp.' >&2
+            exit 1
+        fi
+        gzip -t "$latest_dump"
+        test -s "$compose_dir/compose.yaml"
+        test -s "$compose_dir/.env"
+        {
+            date --iso-8601=seconds
+            printf 'Database dump: %s\n' "$latest_dump"
+            docker inspect --format '{% raw %}{{.Name}} {{.Config.Image}} {{.Image}}{% endraw %}' \
+                immich_server immich_postgres immich_machine_learning immich_redis
+        } > "$state_dir/deployment.txt.tmp"
+        mv "$state_dir/deployment.txt.tmp" "$state_dir/deployment.txt"
+        restic_command backup --host "$snapshot_host" --tag immich \
+            "$source_dir" "$compose_dir/compose.yaml" "$compose_dir/.env" \
+            "$state_dir/deployment.txt"
+        ;;
+    maintenance)
+        restic_command check
+        restic_command forget --host "$snapshot_host" --tag immich \
+            --keep-daily {{ immich_backup_keep_daily | int }} \
+            --keep-weekly {{ immich_backup_keep_weekly | int }} \
+            --keep-monthly {{ immich_backup_keep_monthly | int }} --prune
+        restic_command check --read-data-subset={{ immich_backup_read_data_percent | int }}%
+        ;;
+    check|restore|ls|stats)
+        restic_command "$@"
+        ;;
+    *)
+        echo 'Usage: immich-backup {init|backup|maintenance|snapshots|check|restore|ls|stats}' >&2
+        exit 2
+        ;;
+esac

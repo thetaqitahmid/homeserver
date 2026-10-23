@@ -1,0 +1,20 @@
+---
+immich_backup_source: /media/immich
+immich_backup_compose_dir: /home/taqi/docker/immich
+immich_backup_config_dir: /etc/immich-backup
+immich_backup_state_dir: /var/lib/immich-backup
+immich_backup_ssh_host: u698571.your-storagebox.de
+immich_backup_ssh_user: u698571
+immich_backup_ssh_port: 23
+immich_backup_existing_key: /home/taqi/.ssh/hetzner
+immich_backup_repository: sftp:hetzner-backup:restic/immich
+immich_backup_snapshot_host: immich-dockerhost
+immich_backup_calendar: "*-*-* 03:00:00 UTC"
+immich_backup_maintenance_calendar: "Sun *-*-* 03:00:00 Europe/Helsinki"
+immich_backup_dump_max_age_seconds: 93600
+immich_backup_keep_daily: 7
+immich_backup_keep_weekly: 5
+immich_backup_keep_monthly: 12
+immich_backup_read_data_percent: 1
+immich_backup_initialize: false
+immich_backup_timers_enabled: false

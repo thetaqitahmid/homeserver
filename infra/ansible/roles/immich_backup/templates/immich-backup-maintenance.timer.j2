@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly Immich backup maintenance schedule
+
+[Timer]
+OnCalendar={{ immich_backup_maintenance_calendar }}
+Persistent=true
+AccuracySec=1s
+Unit=immich-backup-maintenance.service
+
+[Install]
+WantedBy=timers.target

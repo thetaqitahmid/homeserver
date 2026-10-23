@@ -1,0 +1,8 @@
+---
+- name: Configure Immich backups
+  hosts: immich_backup
+  become: true
+  vars_files:
+    - ../secrets/immich-backup.vault.yaml
+  roles:
+    - immich_backup

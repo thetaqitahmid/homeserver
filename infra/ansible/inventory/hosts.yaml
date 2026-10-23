@@ -2,7 +2,7 @@ all:
   children:
     hypervisors:
     vms:
-    wireguard:
+    immich_backup:
 
 hypervisors:
   children:
@@ -58,9 +58,9 @@ vm_group_2:
       ansible_user: "{{ ansible_vm_user }}"
       ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
 
-wireguard:
+immich_backup:
   hosts:
-    vm10:
-      ansible_host: 192.168.1.174
-      ansible_user: "{{ ansible_vm_user }}"
-      ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
+    dockerhost:
+      ansible_host: 192.168.1.135
+      ansible_user: taqi
+      ansible_ssh_private_key_file: /home/taqi/.ssh/homeserver
