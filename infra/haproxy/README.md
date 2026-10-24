@@ -8,14 +8,14 @@ allows services from both Docker and Kubernetes environments to be
 exposed behind a single, cohesive frontend. By using HAProxy with
 SNI-based routing, the following can be achieved:
 
-- **Centralize SSL/TLS termination** across multiple backend
+- **Centralize TLS traffic routing** across multiple backend
   environments
 - **Route traffic dynamically** based on the requested domain to either
   Docker or Kubernetes services
 - **Maintain a single point of entry** for external clients while
   distributing load across heterogeneous backends
-- **Simplify certificate management** by terminating SSL at one
-  location
+- **Preserve backend certificate management** by passing TLS through
+  without terminating it
 - **Note**: TLS termination and certificate management are not handled in this
   setup; SSL/TLS traffic is passed through to backend services
 
@@ -35,7 +35,7 @@ Docker backend based on the requested domain.
   localhost (local2)
 - **Admin Socket**: Accessible at `/run/haproxy/admin.sock` for
   statistics and administration
-- **Max Connections**: 10,000 concurrent connections
+- **Max Connections**: 1,000 concurrent connections
 - **User/Group**: Runs as `haproxy` user and group
 
 ## Default Timeout Settings
@@ -48,6 +48,14 @@ Docker backend based on the requested domain.
 
 The HAProxy frontend listens on port 443 (HTTPS) and TCP mode is used
 for SSL/TLS traffic.
+
+### Connection Rate Limiting
+
+New TCP connections are limited to approximately 100 per 10 seconds per
+source IP using a stick table. Connections exceeding the limit are
+rejected before TLS inspection. This does not limit HTTP request rates
+within established connections. Clients sharing a NAT address or an
+upstream proxy share the same limit.
 
 ### SNI-Based Routing
 
@@ -82,7 +90,11 @@ hostname:
 
 The SSL hello packet is automatically inspected to determine the SNI
 hostname, and the connection is routed to the appropriate backend
-service.
+service. Connections with SNI outside the configured domain suffixes or
+without SNI are rejected. Connections that do not provide a usable TLS
+ClientHello within the 5-second inspection window are also rejected.
+There is no default backend. The apex `mydomain.com` is not included in
+the suffix rules.
 
 ## Notes
 
