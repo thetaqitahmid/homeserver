@@ -25,44 +25,44 @@ image:
   longhorn:
     engine:
       repository: longhornio/longhorn-engine
-      tag: v1.4.0
+      tag: v1.13.0
     manager:
       repository: longhornio/longhorn-manager
-      tag: v1.4.0
+      tag: v1.13.0
     ui:
       repository: longhornio/longhorn-ui
-      tag: v1.4.0
+      tag: v1.13.0
     instanceManager:
       repository: longhornio/longhorn-instance-manager
-      tag: v1.4.0
+      tag: v1.13.0
     shareManager:
       repository: longhornio/longhorn-share-manager
-      tag: v1.4.0
+      tag: v1.13.0
     backingImageManager:
       repository: longhornio/backing-image-manager
-      tag: v1.4.0
+      tag: v1.13.0
     supportBundleKit:
       repository: longhornio/support-bundle-kit
-      tag: v0.0.69
+      tag: v0.0.93
   csi:
     attacher:
       repository: longhornio/csi-attacher
-      tag: v3.4.0
+      tag: v4.12.0
     provisioner:
       repository: longhornio/csi-provisioner
-      tag: v2.1.2
+      tag: v6.3.0
     nodeDriverRegistrar:
       repository: longhornio/csi-node-driver-registrar
-      tag: v2.5.0
+      tag: v2.17.0
     resizer:
       repository: longhornio/csi-resizer
-      tag: v1.3.0
+      tag: v2.2.1
     snapshotter:
       repository: longhornio/csi-snapshotter
-      tag: v5.0.1
+      tag: v8.7.0
     livenessProbe:
       repository: longhornio/livenessprobe
-      tag: v2.8.0
+      tag: v2.19.0
   pullPolicy: IfNotPresent
 
 service:

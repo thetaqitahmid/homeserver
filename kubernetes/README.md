@@ -244,20 +244,25 @@ envsubst < my-portfolio/portfolioManifest.yaml | \
   kubectl apply -n my-portfolio -f -
 ```
 
-# Expose External Services via Traefik Ingress Controller
+# Expose External Services via NGINX Ingress Controller
 
-External services hosted outside the kubernetes cluster can be exposed using
-the kubernetes traefik reverse proxy.
+External services hosted outside the Kubernetes cluster can be exposed using
+the NGINX Ingress Controller without deploying an additional proxy.
 
-A nginx http server is deployed as a proxy that listens on port 80
-and redirects requests to the proxmox local IP address. The server has an
-associated clusterIP service which is exposed via ingress. The nginx proxy can
-be configured to listen to other ports and forward traffic to other external
-services running locally or remotely.
+The Proxmox manifest defines a Service without a selector and an EndpointSlice
+pointing to `${PROXMOX_IP}` on HTTPS port 8006. Set `${PROXMOX_IP}` to the node's
+IPv4 address without a scheme or port, and `${PROXMOX_HOST}` to the desired FQDN.
+Point that hostname's DNS record to the ingress controller's IP and ensure the
+controller can reach the Proxmox node on port 8006.
+
+The Ingress uses the `nginx` ingress class and the `acme-issuer` ClusterIssuer
+to provision the `proxmox-tls` certificate. Upstream certificate verification is
+disabled to support Proxmox's default certificate; configure a trusted upstream
+certificate and enable verification for stronger security. WebSockets are
+supported by NGINX Ingress, with one hour proxy timeouts for console sessions.
 
 ```bash
 source .env
-kubectl create namespace external-services
 envsubst '${PROXMOX_IP} ${PROXMOX_HOST}' < external-service/proxmox.yaml | \
   kubectl apply -n external-services -f -
 ```
@@ -1125,24 +1130,25 @@ considerations. Do not run manual Helm upgrades after Flux takes ownership.
 Stirling PDF provides PDF editing tools with password authentication and
 persistent storage. Set the domain in `.env`:
 
-```fish
-set -x STIRLING_PDF_HOST "pdf.tahmidcloud.com"
+```bash
+export STIRLING_PDF_HOST="pdf.tahmidcloud.com"
 ```
 
 Create the initial admin Secret once before deploying:
 
-```fish
+```bash
 source .env
 kubectl create namespace stirling-pdf --dry-run=client -o yaml | kubectl apply -f -
-read --silent --prompt-str 'Initial admin password: ' STIRLING_PDF_ADMIN_PASSWORD
+IFS= read -r -s -p 'Initial admin password: ' STIRLING_PDF_ADMIN_PASSWORD
+printf '\n'
 printf '%s' "$STIRLING_PDF_ADMIN_PASSWORD" | kubectl create secret generic stirling-pdf-admin \
     --namespace stirling-pdf --from-literal=username=admin --from-file=password=/dev/stdin
-set -e STIRLING_PDF_ADMIN_PASSWORD
+unset STIRLING_PDF_ADMIN_PASSWORD
 ```
 
 Deploy or upgrade:
 
-```fish
+```bash
 source .env
 helm repo add stirling-pdf https://stirling-tools.github.io/Stirling-PDF-chart
 helm repo update stirling-pdf

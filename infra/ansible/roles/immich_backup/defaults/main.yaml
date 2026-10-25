@@ -10,7 +10,7 @@ immich_backup_existing_key: /home/taqi/.ssh/hetzner
 immich_backup_repository: sftp:hetzner-backup:restic/immich
 immich_backup_snapshot_host: immich-dockerhost
 immich_backup_calendar: "*-*-* 03:00:00 UTC"
-immich_backup_maintenance_calendar: "Sun *-*-* 03:00:00 Europe/Helsinki"
+immich_backup_maintenance_calendar: "Sun *-*-* 05:00:00 Europe/Helsinki"
 immich_backup_dump_max_age_seconds: 93600
 immich_backup_keep_daily: 7
 immich_backup_keep_weekly: 5

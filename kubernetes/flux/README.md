@@ -76,15 +76,15 @@ OpenCloud uses `opencloud-admin` in namespace `opencloud`, with key `password`,
 for `IDM_ADMIN_PASSWORD` in both init and server containers. This Secret was
 created manually from `.env` after confirming the password matched the live
 Deployment. No workload was applied or restarted. For recovery, create the
-namespace and recreate the Secret before reconciliation (Fish shell):
+namespace and recreate the Secret before reconciliation (Bash):
 
-```fish
+```bash
 source .env
 kubectl create namespace opencloud --dry-run=client -o yaml | kubectl apply -f -
-if set -q OPENCLOUD_ADMIN_PASSWORD; and test -n "$OPENCLOUD_ADMIN_PASSWORD"
+if [[ -n "${OPENCLOUD_ADMIN_PASSWORD:-}" ]]; then
     printf '%s' "$OPENCLOUD_ADMIN_PASSWORD" | kubectl create secret generic opencloud-admin \
         --namespace opencloud --from-file=password=/dev/stdin
-end
+fi
 ```
 
 When adopting a Deployment that previously used inline passwords, Kubernetes
@@ -145,9 +145,9 @@ values from Git. Until then, the child does not exist in the live root inventory
 ## Configure Flux in the cluster
 
 Run the following steps from the Kubernetes directory containing this README's
-parent `README.md`. Commands in this section use Bash; the OpenCloud Secret
-recovery example above uses Fish because `.env` is a Fish configuration file.
-Do not source that file in Bash.
+parent `README.md`. Commands in this guide use Bash, including the OpenCloud
+Secret recovery example above. The `.env` file uses Bash export assignments
+and can be loaded with `source .env`.
 
 This guide uses `flux install` followed by this repository's existing source
 and root Kustomization. This avoids generating a second bootstrap source or
