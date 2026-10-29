@@ -1,14 +1,16 @@
 # Flux CD application adoption
 
 The cluster entry point now includes AdGuard Home, the portfolio site,
-OpenCloud, Stirling PDF, and Claimctl. Claimctl's HelmRelease has also been
+OpenCloud, Stirling PDF, Claimctl, and Pocket ID. Pocket ID is a new SQLite
+installation; see its [deployment guide](../pocket-id/README.md) for private
+prerequisites, initial setup, and backups. Claimctl's HelmRelease has also been
 applied locally and reconciled successfully; its child Git reconciliation will
 be created after the new files are published. Claimctl credentials are loaded
 from the ignored `.secrets/claimctl.env` file. OpenCloud's admin Secret was
 manually provisioned from `.env`.
 The root and application reconciliations all have pruning disabled. Application
 reconciliations use `deletionPolicy: Orphan` to preserve resources if removed.
-All five application Kustomizations currently set `spec.suspend: false`, so
+All six application Kustomizations currently set `spec.suspend: false`, so
 application reconciliation is enabled. The root remains active.
 
 ## Included applications
@@ -20,6 +22,7 @@ application reconciliation is enabled. The root remains active.
 | OpenCloud | `opencloud` / ordinary manifests | Running image digest for init and server |
 | Stirling PDF | `stirling-pdf` / `stirling-pdf` | Chart `3.1.0`, image `3.1.0` |
 | Claimctl | `claimctl` / `claimctl` | OCI chart `0.1.0`; running backend, frontend, and PostgreSQL image digests |
+| Pocket ID | `pocket-id` / ordinary manifests | Image `v2.19.1` with multiarchitecture digest pin; SQLite |
 
 The three deployments using `latest` were checked against their running pods'
 `imageID` fields. Their observed digests are pinned in the Flux overlays, so
@@ -37,7 +40,7 @@ release changes. Stirling's Helm repository chart version is an exact pin.
 ## Private hostname configuration
 
 Create a private copy of `flux/ingress-hostnames.example.yaml` outside the
-repository, replace all five example hostnames, and apply it:
+repository, replace all six example hostnames, and apply it:
 
 ```sh
 kubectl apply -f /private/path/ingress-hostnames.yaml
@@ -45,9 +48,9 @@ kubectl apply -f /private/path/ingress-hostnames.yaml
 
 The ConfigMap must be named `ingress-hostnames` in `flux-system` and contain
 nonempty `ADGUARD_HOST`, `PORTFOLIO_HOST`, `OPENCLOUD_HOST`,
-`STIRLING_PDF_HOST`, and `CLAIMCTL_HOST` keys. The
+`STIRLING_PDF_HOST`, `CLAIMCTL_HOST`, and `POCKET_ID_HOST` keys. The
 example file is deliberately not included in the cluster entry point. Do not
-commit private hostname values. All five child reconciliations require this
+commit private hostname values. All six child reconciliations require this
 ConfigMap through `postBuild.substituteFrom`; they fail if it does not exist.
 The watch label triggers reconciliation when hostnames change.
 
@@ -249,7 +252,7 @@ kubectl get pvc --namespace=opencloud
 kubectl get pvc --namespace=stirling-pdf
 ```
 
-Verify all five hostname keys contain real, nonempty hostnames and that DNS
+Verify all six hostname keys contain real, nonempty hostnames and that DNS
 points to the intended ingress controller. Check that the referenced Secrets
 have their required keys without printing their values. Recreate missing
 Secrets using the recovery instructions; do not put them into Git. Confirm
@@ -290,6 +293,7 @@ kubectl kustomize flux/apps/my-portfolio
 kubectl kustomize flux/apps/stirling-pdf
 kubectl kustomize flux/apps/opencloud
 kubectl kustomize flux/apps/claimctl
+kubectl kustomize flux/apps/pocket-id
 helm pull oci://ghcr.io/thetaqitahmid/claimctl/helm/claimctl \
   --version 0.1.0 --untar --untardir /tmp/claimctl-validation
 CLAIMCTL_CHART=/tmp/claimctl-validation/claimctl python -m unittest discover -s flux/tests -v
@@ -303,7 +307,7 @@ Flux reads the remote branch, not your working tree; uncommitted or unpushed
 changes will not be deployed.
 
 All application Kustomizations in `flux/apps/reconciliations.yaml` currently
-set `spec.suspend: false`, enabling all five applications. For staged adoption,
+set `spec.suspend: false`, enabling all six applications. For staged adoption,
 set `spec.suspend: true` on the applications you want to defer before committing
 and pushing. Set each back to `false` in Git when ready. This avoids a race
 where all apps begin reconciling before an imperative suspend command.
@@ -320,9 +324,9 @@ flux get kustomizations --namespace=flux-system
 ```
 
 The root creates `app-adguard`, `app-my-portfolio`, `app-opencloud`, and
-`app-stirling-pdf`, plus `app-claimctl`. Each child reads its hostname values from the private
+`app-stirling-pdf`, plus `app-claimctl` and `app-pocket-id`. Each child reads its hostname values from the private
 ConfigMap. AdGuard, Stirling, and Claimctl are adopted through HelmRelease resources;
-OpenCloud and the portfolio site are applied as ordinary Kubernetes manifests.
+OpenCloud, Pocket ID, and the portfolio site are applied as ordinary Kubernetes manifests.
 A child configured with `spec.suspend: true` will remain suspended.
 
 ### 3. Reconcile and verify each enabled application
@@ -335,6 +339,7 @@ flux reconcile kustomization app-my-portfolio --namespace=flux-system --with-sou
 flux reconcile kustomization app-opencloud --namespace=flux-system --with-source
 flux reconcile kustomization app-stirling-pdf --namespace=flux-system --with-source
 flux reconcile kustomization app-claimctl --namespace=flux-system --with-source
+flux reconcile kustomization app-pocket-id --namespace=flux-system --with-source
 flux get kustomizations --namespace=flux-system
 flux get helmreleases --all-namespaces
 kubectl rollout status deployment/adguard-home --namespace=adguard --timeout=10m
@@ -343,6 +348,7 @@ kubectl rollout status deployment/opencloud --namespace=opencloud --timeout=10m
 kubectl rollout status deployment/stirling-pdf --namespace=stirling-pdf --timeout=15m
 kubectl rollout status deployment/claimctl-backend --namespace=claimctl --timeout=10m
 kubectl rollout status deployment/claimctl-frontend --namespace=claimctl --timeout=10m
+kubectl rollout status deployment/pocket-id --namespace=pocket-id --timeout=10m
 kubectl rollout status statefulset/claimctl-postgres --namespace=claimctl --timeout=10m
 kubectl get ingress --all-namespaces
 ```

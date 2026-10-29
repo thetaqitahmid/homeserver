@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pocket-id
+  namespace: pocket-id
+  annotations:
+    cert-manager.io/cluster-issuer: acme-issuer
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - "${POCKET_ID_HOST}"
+      secretName: pocket-id-tls
+  rules:
+    - host: "${POCKET_ID_HOST}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pocket-id
+                port:
+                  name: http

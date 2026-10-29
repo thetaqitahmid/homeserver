@@ -6,6 +6,7 @@ metadata:
   labels:
     reconcile.fluxcd.io/watch: Enabled
 data:
+  POCKET_ID_HOST: id.example.com
   CLAIMCTL_HOST: claimctl.example.com
   ADGUARD_HOST: adguard.example.com
   PORTFOLIO_HOST: portfolio.example.com
