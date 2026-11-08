@@ -18,6 +18,8 @@ keyGeneration:
 
 backend:
   replicaCount: 1
+  trustedProxyCIDRs:
+    - "10.42.0.0/16"
   strategy: {}
   revisionHistoryLimit: 10
   podAnnotations: {}
@@ -61,7 +63,7 @@ backend:
   image:
     repository: ghcr.io/thetaqitahmid/claimctl/backend
     pullPolicy: Always
-    tag: "latest"
+    tag: 0.1.0-65259d9
   service:
     type: ClusterIP
     port: 3000
@@ -124,7 +126,7 @@ frontend:
   image:
     repository: ghcr.io/thetaqitahmid/claimctl/frontend
     pullPolicy: Always
-    tag: "latest"
+    tag: 0.1.0-65259d9
   service:
     type: ClusterIP
     port: 80

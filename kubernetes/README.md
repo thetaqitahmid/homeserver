@@ -1038,6 +1038,7 @@ helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stac
   --set grafana.adminPassword=$GRAFANA_PASSWORD \
   --set grafana.ingress.hosts[0]=$GRAFANA_HOST \
   --set grafana.ingress.tls[0].hosts[0]=$GRAFANA_HOST \
+  --set-string 'grafana.grafana\.ini.server.domain'="$GRAFANA_HOST" \
   --atomic
 ```
 
