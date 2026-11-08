@@ -18,8 +18,7 @@ keyGeneration:
 
 backend:
   replicaCount: 1
-  trustedProxyCIDRs:
-    - "10.42.0.0/16"
+  trustedProxyCIDRs: "0.0.0.0/0,::/0"
   strategy: {}
   revisionHistoryLimit: 10
   podAnnotations: {}
@@ -103,6 +102,7 @@ backend:
     failureThreshold: 3
 
 frontend:
+  trustedIngressCIDR: "0.0.0.0/0"
   replicaCount: 1
   strategy: {}
   revisionHistoryLimit: 10
