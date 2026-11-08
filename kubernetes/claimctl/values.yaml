@@ -39,7 +39,11 @@ backend:
     capabilities:
       drop:
         - ALL
-  extraEnv: []
+  extraEnv:
+    - name: HEALTH_CHECK_ALLOWED_CIDRS
+      value: "0.0.0.0/0,::/0"
+    - name: HEALTH_CHECK_ALLOWED_PORTS
+      value: "*"
   waitForDb:
     enabled: true
     image:
@@ -62,7 +66,7 @@ backend:
   image:
     repository: ghcr.io/thetaqitahmid/claimctl/backend
     pullPolicy: Always
-    tag: 0.1.0-65259d9
+    tag: 0.1.0-20261108T181340Z-6a2db92
   service:
     type: ClusterIP
     port: 3000
@@ -126,7 +130,7 @@ frontend:
   image:
     repository: ghcr.io/thetaqitahmid/claimctl/frontend
     pullPolicy: Always
-    tag: 0.1.0-65259d9
+    tag: 0.1.0-20261108T155150Z-8e7aa07
   service:
     type: ClusterIP
     port: 80

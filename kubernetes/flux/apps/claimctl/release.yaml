@@ -11,7 +11,7 @@ spec:
   chart:
     spec:
       chart: claimctl
-      version: "0.1.0"
+      version: "0.1.0-20261108T181408Z-3773c9f"
       sourceRef:
         kind: HelmRepository
         name: claimctl
@@ -22,7 +22,7 @@ spec:
   values:
     backend:
       image:
-        tag: 0.1.0-20261108T155156Z-8e7aa07
+        tag: 0.1.0-20261108T181340Z-6a2db92
     frontend:
       image:
         tag: 0.1.0-20261108T155150Z-8e7aa07
