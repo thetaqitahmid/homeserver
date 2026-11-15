@@ -44,6 +44,17 @@ backend:
       value: "0.0.0.0/0,::/0"
     - name: HEALTH_CHECK_ALLOWED_PORTS
       value: "*"
+    # First-start bootstrap admin. Used only while no admin exists in the
+    # database; ignored on later starts. Create the Secret before deploying:
+    #   kubectl -n claimctl create secret generic claimctl-admin-bootstrap \
+    #     --from-literal=admin-password='<strong-password>'
+    - name: ADMIN_EMAIL
+      value: admin@claimctl.com
+    - name: ADMIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: claimctl-admin-bootstrap
+          key: admin-password
   waitForDb:
     enabled: true
     image:
