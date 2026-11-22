@@ -40,6 +40,8 @@ spec:
               value: "https://${AURRAL_HOST}"
             - name: LIBRARY_FOLDER
               value: /data/audio
+            - name: PATH_MAPPINGS
+              value: "/downloads|/data/downloads"
             - name: AURRAL_VERBOSE_LOGS
               value: "false"
           volumeMounts:

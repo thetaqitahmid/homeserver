@@ -178,6 +178,7 @@ class FluxManifestsTest(unittest.TestCase):
         env = {entry["name"]: entry.get("value") for entry in container["env"]}
         self.assertEqual(env["AURRAL_PUBLIC_URL"], "https://${AURRAL_HOST}")
         self.assertEqual(env["LIBRARY_FOLDER"], "/data/audio")
+        self.assertEqual(env["PATH_MAPPINGS"], "/downloads|/data/downloads")
         mounts = {mount["name"]: mount["mountPath"] for mount in container["volumeMounts"]}
         self.assertEqual(mounts, {"config": "/config", "media": "/data"})
         volumes = {volume["name"]: volume["persistentVolumeClaim"]["claimName"] for volume in pod["volumes"]}

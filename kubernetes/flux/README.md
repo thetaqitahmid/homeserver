@@ -157,10 +157,10 @@ downloaded tracks land beside the current artist folders. The `media` namespace
 and `media-nfs-pvc` must already exist; Flux does not create or manage them.
 
 The NFS export is shared with Jellyfin (`/media`) and qBittorrent (`/downloads`)
-at different container paths. If Aurral must read qBittorrent's completed
-downloads, add a remote path mapping such as `/downloads` to `/data/downloads`
-in Settings > Downloads > Remote path mappings. If Jellyfin playlists must find
-Aurral's tracks, the two services have to expose the Library at the same
+at different container paths. `PATH_MAPPINGS=/downloads|/data/downloads` maps
+qBittorrent's reported path onto Aurral's `/data/downloads` mount, so completed
+downloads are readable without manual UI changes. If Jellyfin playlists must
+find Aurral's tracks, the two services have to expose the Library at the same
 container path; otherwise Jellyfin will import the playlist files without their
 tracks. No Secret is required; the first visit creates the admin account.
 
