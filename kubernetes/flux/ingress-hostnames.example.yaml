@@ -12,3 +12,4 @@ data:
   PORTFOLIO_HOST: portfolio.example.com
   OPENCLOUD_HOST: files.example.com
   STIRLING_PDF_HOST: pdf.example.com
+  AURRAL_HOST: aurral.example.com

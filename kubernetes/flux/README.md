@@ -1,16 +1,16 @@
 # Flux CD application adoption
 
 The cluster entry point now includes AdGuard Home, the portfolio site,
-OpenCloud, Stirling PDF, Claimctl, and Pocket ID. Pocket ID is a new SQLite
-installation; see its [deployment guide](../pocket-id/README.md) for private
-prerequisites, initial setup, and backups. Claimctl's HelmRelease has also been
-applied locally and reconciled successfully; its child Git reconciliation will
-be created after the new files are published. Claimctl credentials are loaded
-from the ignored `.secrets/claimctl.env` file. OpenCloud's admin Secret was
-manually provisioned from `.env`.
+OpenCloud, Stirling PDF, Claimctl, Pocket ID, and Aurral. Pocket ID is a new
+SQLite installation; see its [deployment guide](../pocket-id/README.md) for
+private prerequisites, initial setup, and backups. Claimctl's HelmRelease has
+also been applied locally and reconciled successfully; its child Git
+reconciliation will be created after the new files are published. Claimctl
+credentials are loaded from the ignored `.secrets/claimctl.env` file. OpenCloud's
+admin Secret was manually provisioned from `.env`.
 The root and application reconciliations all have pruning disabled. Application
 reconciliations use `deletionPolicy: Orphan` to preserve resources if removed.
-All six application Kustomizations currently set `spec.suspend: false`, so
+All seven application Kustomizations currently set `spec.suspend: false`, so
 application reconciliation is enabled. The root remains active.
 
 ## Included applications
@@ -23,6 +23,7 @@ application reconciliation is enabled. The root remains active.
 | Stirling PDF | `stirling-pdf` / `stirling-pdf` | Chart `3.1.0`, image `3.1.0` |
 | Claimctl | `claimctl` / `claimctl` | OCI chart `0.1.0`; running backend, frontend, and PostgreSQL image digests |
 | Pocket ID | `pocket-id` / ordinary manifests | Image `v2.19.1` with multiarchitecture digest pin; SQLite |
+| Aurral | `media` / ordinary manifests | Image `3.0.1` with multiarchitecture digest pin; NFS `audio/` Library folder |
 
 The three deployments using `latest` were checked against their running pods'
 `imageID` fields. Their observed digests are pinned in the Flux overlays, so
@@ -40,7 +41,7 @@ release changes. Stirling's Helm repository chart version is an exact pin.
 ## Private hostname configuration
 
 Create a private copy of `flux/ingress-hostnames.example.yaml` outside the
-repository, replace all six example hostnames, and apply it:
+repository, replace all seven example hostnames, and apply it:
 
 ```sh
 kubectl apply -f /private/path/ingress-hostnames.yaml
@@ -48,9 +49,9 @@ kubectl apply -f /private/path/ingress-hostnames.yaml
 
 The ConfigMap must be named `ingress-hostnames` in `flux-system` and contain
 nonempty `ADGUARD_HOST`, `PORTFOLIO_HOST`, `OPENCLOUD_HOST`,
-`STIRLING_PDF_HOST`, `CLAIMCTL_HOST`, and `POCKET_ID_HOST` keys. The
-example file is deliberately not included in the cluster entry point. Do not
-commit private hostname values. All six child reconciliations require this
+`STIRLING_PDF_HOST`, `CLAIMCTL_HOST`, `POCKET_ID_HOST`, and `AURRAL_HOST` keys.
+The example file is deliberately not included in the cluster entry point. Do not
+commit private hostname values. All seven child reconciliations require this
 ConfigMap through `postBuild.substituteFrom`; they fail if it does not exist.
 The watch label triggers reconciliation when hostnames change.
 
@@ -144,6 +145,24 @@ and credential rotation policy.
 The new HelmRelease was applied locally to verify adoption. Commit and push the
 configuration to `master` to let the root create `app-claimctl` and manage its
 values from Git. Until then, the child does not exist in the live root inventory.
+
+### Aurral media storage and adoption
+
+Aurral is deployed into the existing `media` namespace so it can reuse the
+manually provisioned `media-nfs-pvc` (`ReadWriteMany`, 900Gi) at `/data`. Its
+`aurral-config` PVC on Longhorn holds `/config` (database, settings, users, jobs).
+The NFS mount exposes the existing `audio/` directory, and
+`LIBRARY_FOLDER=/data/audio` makes that folder Aurral's writable Library, so
+downloaded tracks land beside the current artist folders. The `media` namespace
+and `media-nfs-pvc` must already exist; Flux does not create or manage them.
+
+The NFS export is shared with Jellyfin (`/media`) and qBittorrent (`/downloads`)
+at different container paths. If Aurral must read qBittorrent's completed
+downloads, add a remote path mapping such as `/downloads` to `/data/downloads`
+in Settings > Downloads > Remote path mappings. If Jellyfin playlists must find
+Aurral's tracks, the two services have to expose the Library at the same
+container path; otherwise Jellyfin will import the playlist files without their
+tracks. No Secret is required; the first visit creates the admin account.
 
 ## Configure Flux in the cluster
 
@@ -250,9 +269,10 @@ kubectl get storageclass longhorn longhorn-2x
 kubectl get pvc --namespace=adguard
 kubectl get pvc --namespace=opencloud
 kubectl get pvc --namespace=stirling-pdf
+kubectl get pvc media-nfs-pvc --namespace=media
 ```
 
-Verify all six hostname keys contain real, nonempty hostnames and that DNS
+Verify all seven hostname keys contain real, nonempty hostnames and that DNS
 points to the intended ingress controller. Check that the referenced Secrets
 have their required keys without printing their values. Recreate missing
 Secrets using the recovery instructions; do not put them into Git. Confirm
@@ -294,6 +314,7 @@ kubectl kustomize flux/apps/stirling-pdf
 kubectl kustomize flux/apps/opencloud
 kubectl kustomize flux/apps/claimctl
 kubectl kustomize flux/apps/pocket-id
+kubectl kustomize flux/apps/aurral
 helm pull oci://ghcr.io/thetaqitahmid/claimctl/helm/claimctl \
   --version 0.1.0 --untar --untardir /tmp/claimctl-validation
 CLAIMCTL_CHART=/tmp/claimctl-validation/claimctl python -m unittest discover -s flux/tests -v
@@ -307,7 +328,7 @@ Flux reads the remote branch, not your working tree; uncommitted or unpushed
 changes will not be deployed.
 
 All application Kustomizations in `flux/apps/reconciliations.yaml` currently
-set `spec.suspend: false`, enabling all six applications. For staged adoption,
+set `spec.suspend: false`, enabling all seven applications. For staged adoption,
 set `spec.suspend: true` on the applications you want to defer before committing
 and pushing. Set each back to `false` in Git when ready. This avoids a race
 where all apps begin reconciling before an imperative suspend command.
@@ -323,10 +344,11 @@ flux reconcile kustomization homelab --namespace=flux-system --with-source
 flux get kustomizations --namespace=flux-system
 ```
 
-The root creates `app-adguard`, `app-my-portfolio`, `app-opencloud`, and
-`app-stirling-pdf`, plus `app-claimctl` and `app-pocket-id`. Each child reads its hostname values from the private
-ConfigMap. AdGuard, Stirling, and Claimctl are adopted through HelmRelease resources;
-OpenCloud, Pocket ID, and the portfolio site are applied as ordinary Kubernetes manifests.
+The root creates `app-adguard`, `app-my-portfolio`, `app-opencloud`,
+`app-stirling-pdf`, `app-claimctl`, `app-pocket-id`, and `app-aurral`. Each
+child reads its hostname values from the private ConfigMap. AdGuard, Stirling,
+and Claimctl are adopted through HelmRelease resources; OpenCloud, Pocket ID,
+Aurral, and the portfolio site are applied as ordinary Kubernetes manifests.
 A child configured with `spec.suspend: true` will remain suspended.
 
 ### 3. Reconcile and verify each enabled application
@@ -340,6 +362,7 @@ flux reconcile kustomization app-opencloud --namespace=flux-system --with-source
 flux reconcile kustomization app-stirling-pdf --namespace=flux-system --with-source
 flux reconcile kustomization app-claimctl --namespace=flux-system --with-source
 flux reconcile kustomization app-pocket-id --namespace=flux-system --with-source
+flux reconcile kustomization app-aurral --namespace=flux-system --with-source
 flux get kustomizations --namespace=flux-system
 flux get helmreleases --all-namespaces
 kubectl rollout status deployment/adguard-home --namespace=adguard --timeout=10m
@@ -349,6 +372,7 @@ kubectl rollout status deployment/stirling-pdf --namespace=stirling-pdf --timeou
 kubectl rollout status deployment/claimctl-backend --namespace=claimctl --timeout=10m
 kubectl rollout status deployment/claimctl-frontend --namespace=claimctl --timeout=10m
 kubectl rollout status deployment/pocket-id --namespace=pocket-id --timeout=10m
+kubectl rollout status deployment/aurral --namespace=media --timeout=10m
 kubectl rollout status statefulset/claimctl-postgres --namespace=claimctl --timeout=10m
 kubectl get ingress --all-namespaces
 ```

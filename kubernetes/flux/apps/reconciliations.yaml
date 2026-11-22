@@ -129,3 +129,25 @@ spec:
       - kind: ConfigMap
         name: ingress-hostnames
         optional: false
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-aurral
+  namespace: flux-system
+spec:
+  suspend: false
+  interval: 10m
+  path: ./kubernetes/flux/apps/aurral
+  prune: false
+  deletionPolicy: Orphan
+  wait: true
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: homelab
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: ingress-hostnames
+        optional: false

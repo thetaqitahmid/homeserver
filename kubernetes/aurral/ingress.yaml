@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aurral
+  namespace: media
+  annotations:
+    cert-manager.io/cluster-issuer: acme-issuer
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "${AURRAL_HOST}"
+      secretName: aurral-tls
+  rules:
+    - host: "${AURRAL_HOST}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aurral
+                port:
+                  name: http

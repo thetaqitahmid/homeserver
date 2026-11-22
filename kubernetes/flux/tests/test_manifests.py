@@ -28,7 +28,7 @@ class FluxManifestsTest(unittest.TestCase):
         self.assertEqual((REPOSITORY_ROOT / root["spec"]["path"]).resolve(), ROOT / "flux/clusters/homelab")
         build(REPOSITORY_ROOT / root["spec"]["path"])
         apps = [item for item in resources if item["metadata"]["name"].startswith("app-")]
-        self.assertEqual(len(apps), 6)
+        self.assertEqual(len(apps), 7)
         for app in apps:
             with self.subTest(app=app["metadata"]["name"]):
                 self.assertFalse(app["spec"]["suspend"])
@@ -44,7 +44,7 @@ class FluxManifestsTest(unittest.TestCase):
     def test_hostnames_are_declared_and_no_secrets_are_rendered(self):
         example = yaml.safe_load((ROOT / "flux/ingress-hostnames.example.yaml").read_text())
         variables = set()
-        for app in ("adguard", "claimctl", "my-portfolio", "stirling-pdf", "opencloud", "pocket-id"):
+        for app in ("adguard", "aurral", "claimctl", "my-portfolio", "stirling-pdf", "opencloud", "pocket-id"):
             resources = build(f"flux/apps/{app}")
             self.assertFalse(any(item["kind"] == "Secret" for item in resources))
             variables.update(re.findall(r"\$\{([A-Z_]+)\}", yaml.safe_dump(resources)))
@@ -161,6 +161,39 @@ class FluxManifestsTest(unittest.TestCase):
         rule = ingress["spec"]["rules"][0]
         self.assertEqual(rule["host"], "${POCKET_ID_HOST}")
         self.assertEqual(rule["http"]["paths"][0]["backend"]["service"], {"name": service["metadata"]["name"], "port": {"name": "http"}})
+
+    def test_aurral_uses_media_namespace_audio_library_and_pins_image(self):
+        resources = build("flux/apps/aurral")
+        self.assertEqual(resources, build("aurral"))
+        self.assertEqual({item["metadata"]["namespace"] for item in resources}, {"media"})
+        self.assertFalse(any(item["kind"] == "Namespace" for item in resources))
+        deployment = next(item for item in resources if item["kind"] == "Deployment")
+        self.assertEqual(deployment["spec"]["replicas"], 1)
+        self.assertEqual(deployment["spec"]["strategy"], {"type": "Recreate"})
+        pod = deployment["spec"]["template"]["spec"]
+        self.assertFalse(pod["automountServiceAccountToken"])
+        self.assertTrue(pod["securityContext"]["runAsNonRoot"])
+        container = pod["containers"][0]
+        self.assertRegex(container["image"], r"^ghcr\.io/lklynet/aurral:3\.0\.1@sha256:[a-f0-9]{64}$")
+        env = {entry["name"]: entry.get("value") for entry in container["env"]}
+        self.assertEqual(env["AURRAL_PUBLIC_URL"], "https://${AURRAL_HOST}")
+        self.assertEqual(env["LIBRARY_FOLDER"], "/data/audio")
+        mounts = {mount["name"]: mount["mountPath"] for mount in container["volumeMounts"]}
+        self.assertEqual(mounts, {"config": "/config", "media": "/data"})
+        volumes = {volume["name"]: volume["persistentVolumeClaim"]["claimName"] for volume in pod["volumes"]}
+        self.assertEqual(volumes, {"config": "aurral-config", "media": "media-nfs-pvc"})
+        for probe in ("startupProbe", "readinessProbe", "livenessProbe"):
+            self.assertEqual(container[probe]["httpGet"]["path"], "/api/health/live")
+        service = next(item for item in resources if item["kind"] == "Service")
+        self.assertEqual(service["spec"]["ports"][0]["port"], 3001)
+        ingress = next(item for item in resources if item["kind"] == "Ingress")
+        self.assertEqual(ingress["spec"]["ingressClassName"], "nginx")
+        self.assertEqual(ingress["spec"]["tls"][0]["hosts"], ["${AURRAL_HOST}"])
+        self.assertEqual(ingress["spec"]["rules"][0]["host"], "${AURRAL_HOST}")
+        pvc = next(item for item in resources if item["kind"] == "PersistentVolumeClaim")
+        self.assertEqual(pvc["metadata"]["name"], "aurral-config")
+        self.assertEqual(pvc["spec"]["storageClassName"], "longhorn")
+        self.assertEqual(pvc["spec"]["resources"]["requests"]["storage"], "5Gi")
 
     def test_portfolio_pins_running_image(self):
         resources = build("flux/apps/my-portfolio")
