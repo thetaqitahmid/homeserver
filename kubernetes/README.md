@@ -1085,7 +1085,7 @@ kubectl -n opencloud logs deploy/opencloud -c opencloud --tail=50
 # Claimctl
 
 Claimctl is managed by the Flux app in `flux/apps/claimctl`, using the GHCR
-OCI chart pinned to `0.1.0`. The shared overlay is `claimctl/values.yaml`.
+OCI chart pinned to `0.1.0-20261108T181408Z-3773c9f`. The shared overlay is `claimctl/values.yaml`.
 Both ingress and TLS hostnames use `CLAIMCTL_HOST` from the private
 `flux-system/ingress-hostnames` ConfigMap, just like the other Flux apps.
 See [Flux application adoption](flux/README.md) for reconciliation commands.

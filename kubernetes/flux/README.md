@@ -21,7 +21,7 @@ application reconciliation is enabled. The root remains active.
 | Portfolio | `my-portfolio` / ordinary manifests | Running image digest |
 | OpenCloud | `opencloud` / ordinary manifests | Running image digest for init and server |
 | Stirling PDF | `stirling-pdf` / `stirling-pdf` | Chart `3.1.0`, image `3.1.0` |
-| Claimctl | `claimctl` / `claimctl` | OCI chart `0.1.0`; running backend, frontend, and PostgreSQL image digests |
+| Claimctl | `claimctl` / `claimctl` | OCI chart `0.1.0-20261108T181408Z-3773c9f`; running backend, frontend, and PostgreSQL image digests |
 | Pocket ID | `pocket-id` / ordinary manifests | Image `v2.19.1` with multiarchitecture digest pin; SQLite |
 | Aurral | `media` / ordinary manifests | Image `3.0.1` with multiarchitecture digest pin; NFS `audio/` Library folder |
 
@@ -316,7 +316,7 @@ kubectl kustomize flux/apps/claimctl
 kubectl kustomize flux/apps/pocket-id
 kubectl kustomize flux/apps/aurral
 helm pull oci://ghcr.io/thetaqitahmid/claimctl/helm/claimctl \
-  --version 0.1.0 --untar --untardir /tmp/claimctl-validation
+  --version 0.1.0-20261108T181408Z-3773c9f --untar --untardir /tmp/claimctl-validation
 CLAIMCTL_CHART=/tmp/claimctl-validation/claimctl python -m unittest discover -s flux/tests -v
 git diff --check
 ```

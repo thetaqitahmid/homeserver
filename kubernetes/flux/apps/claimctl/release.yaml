@@ -22,10 +22,10 @@ spec:
   values:
     backend:
       image:
-        tag: 0.1.0-20261108T181340Z-6a2db92
+        tag: 0.1.0-20261108T181340Z-6a2db92@sha256:ee6cf588a13be729cba5d2ab43594bbebdb21c29aeb16b71c25f9a9e603dc1e2
     frontend:
       image:
-        tag: 0.1.0-20261108T155150Z-8e7aa07
+        tag: 0.1.0-20261108T155150Z-8e7aa07@sha256:5b98547227962d54bfeb9fe0496f656d8963ff9b53292de610f3765202995354
     postgres:
       image:
         tag: 18.1@sha256:1090bc3a8ccfb0b55f78a494d76f8d603434f7e4553543d6e807bc7bd6bbd17f

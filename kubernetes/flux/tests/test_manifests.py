@@ -70,7 +70,7 @@ class FluxManifestsTest(unittest.TestCase):
         release, config, values = self.claimctl_config()
         self.assertEqual(release["metadata"]["namespace"], "claimctl")
         self.assertEqual(release["spec"]["releaseName"], "claimctl")
-        self.assertEqual(release["spec"]["chart"]["spec"]["version"], "0.1.0")
+        self.assertEqual(release["spec"]["chart"]["spec"]["version"], "0.1.0-20261108T181408Z-3773c9f")
         repository = next(item for item in build("flux/apps/claimctl") if item["kind"] == "HelmRepository")
         self.assertEqual(repository["spec"]["type"], "oci")
         self.assertEqual(repository["spec"]["url"], "oci://ghcr.io/thetaqitahmid/claimctl/helm")
@@ -89,7 +89,7 @@ class FluxManifestsTest(unittest.TestCase):
         for component in ("backend", "frontend", "postgres"):
             self.assertRegex(release["spec"]["values"][component]["image"]["tag"], r"@sha256:[a-f0-9]{64}$")
 
-    @unittest.skipUnless(os.environ.get("CLAIMCTL_CHART"), "Set CLAIMCTL_CHART to the unpacked 0.1.0 chart for Helm rendering")
+    @unittest.skipUnless(os.environ.get("CLAIMCTL_CHART"), "Set CLAIMCTL_CHART to the unpacked 0.1.0-20261108T181408Z-3773c9f chart for Helm rendering")
     def test_claimctl_chart_renders_only_secret_references(self):
         release, _, _ = self.claimctl_config()
         result = subprocess.run(
